@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
-    <!-- Firebase Realtime Database SDKs (Compat v9) -->
+    <!-- Firebase Realtime Database SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -69,15 +69,22 @@
             <div class="p-6">
                 <!-- A. Employee Login -->
                 <form id="formEmployeeLogin" onsubmit="loginEmployee(event)" class="space-y-4">
+                    <!-- Error Alert Box -->
+                    <div id="empErrorAlert" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2">
+                        <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i>
+                        <span id="empErrorMessage">Invalid Employee! ID or Name not registered.</span>
+                    </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Employee ID</label>
-                        <input type="text" id="empId" required placeholder="EMP-101" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Employee ID *</label>
+                        <input type="text" id="empId" required placeholder="e.g. EMP-101" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        <span class="text-[10px] text-slate-400">Sample default: <code>EMP-101</code></span>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
                         <input type="text" id="empFullName" required placeholder="e.g. Alex Morgan" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow">
+                    <button type="submit" id="empLoginBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow">
                         <i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In
                     </button>
                 </form>
@@ -135,7 +142,7 @@
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-emerald-800 bg-opacity-40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Tracking Active
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Active (Active Session)
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
@@ -191,13 +198,37 @@
         <section id="adminDashboardSection" class="hidden space-y-6">
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-800">Admin Command Center (Mac / Cloud)</h2>
+                    <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
                     <p class="text-xs text-slate-500">Live multi-device staff tracking across phones, tabs, and cabs.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
                         Logout Admin
                     </button>
+                </div>
+            </div>
+
+            <!-- ADMIN FEATURE: REGISTERED EMPLOYEE MANAGEMENT -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                        <i class="fa-solid fa-users-gear text-indigo-600 mr-1.5"></i> Manage Registered Employees
+                    </h3>
+                    <span class="text-xs text-slate-400">Only registered employees can punch in</span>
+                </div>
+
+                <!-- Add Employee Form -->
+                <form onsubmit="addRegisteredEmployee(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="newEmpId" required placeholder="New Employee ID (e.g. EMP-105)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" id="newEmpName" required placeholder="Employee Full Name (e.g. Ashwin)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold py-2 transition shadow">
+                        <i class="fa-solid fa-user-plus mr-1"></i> Register Employee
+                    </button>
+                </form>
+
+                <!-- List of Registered Employees -->
+                <div id="registeredEmployeesList" class="flex flex-wrap gap-2 pt-2">
+                    <!-- Dynamic badges loaded here -->
                 </div>
             </div>
 
@@ -209,15 +240,16 @@
                 <div id="adminLiveMap"></div>
             </div>
 
-            <!-- LIVE DATA TABLE -->
+            <!-- LIVE DATA TABLE (WITH DEDICATED PUNCH-IN & PUNCH-OUT COLUMNS) -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                                <th class="p-3">User</th>
+                                <th class="p-3">User Details</th>
                                 <th class="p-3">Role & Venue</th>
-                                <th class="p-3">Punch-In</th>
+                                <th class="p-3 bg-emerald-50 text-emerald-900 border-l border-emerald-100">Punch-In Time</th>
+                                <th class="p-3 bg-rose-50 text-rose-900 border-l border-rose-100">Punch-Out Time</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">Live GPS Location</th>
                             </tr>
@@ -229,9 +261,8 @@
         </section>
     </main>
 
-    <!-- ================= SCRIPT LOGIC WITH YOUR LIVE FIREBASE ================= -->
+    <!-- ================= SCRIPT LOGIC ================= -->
     <script>
-        // YOUR LIVE FIREBASE CONFIGURATION
         const firebaseConfig = {
             apiKey: "AIzaSyADLxNyjda3Vt1xehQudwNSyjKyhxd0cc4",
             authDomain: "eavattendance.firebaseapp.com",
@@ -243,7 +274,6 @@
             measurementId: "G-L1HBTD3T7R"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -252,6 +282,43 @@
         let leafletMap = null;
         let mapMarkers = {};
         const ADMIN_PASSCODE = "admin123";
+
+        // Seed initial employees in Firebase if empty
+        function initRoster() {
+            db.ref('registered_employees').once('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    db.ref('registered_employees').set({
+                        "EMP-101": { name: "Alex Morgan" },
+                        "EMP-102": { name: "Sarah Jenkins" },
+                        "EMP-103": { name: "Rahul Sharma" }
+                    });
+                }
+            });
+        }
+        initRoster();
+
+        // -------------------------------------------------------------
+        // AUTO-RESUME ACTIVE SESSION (Tab Close / Reload Protection)
+        // -------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedSessionKey = localStorage.getItem('eav_active_session_key');
+            if (savedSessionKey) {
+                db.ref('sessions/' + savedSessionKey).once('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const sessionData = snapshot.val();
+                        // Only resume if not already punched out
+                        if (sessionData.isActive === true) {
+                            currentUserKey = savedSessionKey;
+                            renderUserPortal(sessionData);
+                            startLiveLocationTracking();
+                            return;
+                        }
+                    }
+                    // Clean up stale key if session is closed
+                    localStorage.removeItem('eav_active_session_key');
+                });
+            }
+        });
 
         // Tab Switching
         function switchLoginTab(tab) {
@@ -276,12 +343,63 @@
             }
         }
 
-        // ================= AUTHENTICATION & CLOUD SYNC =================
+        // ================= EMPLOYEE LOGIN & DUPLICATE PREVENTION =================
         function loginEmployee(e) {
             e.preventDefault();
-            const id = document.getElementById('empId').value;
-            const name = document.getElementById('empFullName').value;
-            startSession({ id, name, type: 'Employee', subInfo: `ID: ${id}` });
+            const idInput = document.getElementById('empId').value.trim().toUpperCase();
+            const nameInput = document.getElementById('empFullName').value.trim();
+            const errorAlert = document.getElementById('empErrorAlert');
+            const errorMsg = document.getElementById('empErrorMessage');
+            const loginBtn = document.getElementById('empLoginBtn');
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...`;
+
+            // 1. Verify against Registered Roster
+            db.ref('registered_employees/' + idInput).once('value', (snapshot) => {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In`;
+
+                if (snapshot.exists()) {
+                    const registeredData = snapshot.val();
+                    if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
+                        errorAlert.classList.add('hidden');
+                        
+                        // 2. DUPLICATE CHECK: Search if user ALREADY has an active ongoing session
+                        db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
+                            const sessions = sessionSnap.val() || {};
+                            let activeKey = null;
+                            let activeData = null;
+
+                            for (let key in sessions) {
+                                if (sessions[key].isActive === true) {
+                                    activeKey = key;
+                                    activeData = sessions[key];
+                                    break;
+                                }
+                            }
+
+                            if (activeKey) {
+                                // Resume existing session (NO DUPLICATE ENTRY CREATED)
+                                currentUserKey = activeKey;
+                                localStorage.setItem('eav_active_session_key', currentUserKey);
+                                renderUserPortal(activeData);
+                                startLiveLocationTracking();
+                            } else {
+                                // Create Brand New Punch-In Session
+                                startSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` });
+                            }
+                        });
+
+                    } else {
+                        errorAlert.classList.remove('hidden');
+                        errorMsg.innerHTML = `<strong>Invalid Employee:</strong> Name does not match registered name for ID <code>${idInput}</code>.`;
+                    }
+                } else {
+                    errorAlert.classList.remove('hidden');
+                    errorMsg.innerHTML = `<strong>Invalid Employee:</strong> ID <code>${idInput}</code> is not registered in our company database. Please contact Admin.`;
+                }
+            });
         }
 
         function loginDriver(e) {
@@ -300,16 +418,18 @@
         }
 
         function startSession(userData) {
-            const punchInTime = new Date().toLocaleTimeString();
+            const punchInTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
-            // Push record to Firebase Realtime Database
             const newRef = db.ref('sessions').push();
             currentUserKey = newRef.key;
+
+            // Save key in localStorage so reloading/closing browser remembers the session
+            localStorage.setItem('eav_active_session_key', currentUserKey);
 
             const sessionData = {
                 ...userData,
                 punchIn: punchInTime,
-                punchOut: 'Active (On Duty)',
+                punchOut: '--',
                 venue: 'Pending Venue Submission',
                 role: userData.type === 'Cab Driver' ? 'Cab Driver' : 'Pending Role',
                 eventDate: new Date().toISOString().slice(0, 10),
@@ -322,21 +442,30 @@
 
             newRef.set(sessionData);
 
-            // Start Live Location Watching on Phone
+            renderUserPortal(sessionData);
             startLiveLocationTracking();
+        }
 
-            // Transition UI
+        function renderUserPortal(data) {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('userPortalSection').classList.remove('hidden');
             document.getElementById('navUserBadge').classList.remove('hidden');
-            document.getElementById('navUserName').innerText = userData.name;
-            document.getElementById('navUserRole').innerText = `${userData.type}`;
-            document.getElementById('userWelcomeTitle').innerText = `Hello, ${userData.name}!`;
-            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${punchInTime}`;
+            document.getElementById('navUserName').innerText = data.name;
+            document.getElementById('navUserRole').innerText = `${data.type} • ${data.subInfo}`;
+            document.getElementById('userWelcomeTitle').innerText = `Hello, ${data.name}!`;
+            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchIn} | Session Active`;
+
+            if (data.venue && data.venue !== 'Pending Venue Submission') {
+                document.getElementById('dutyVenue').value = data.venue;
+                document.getElementById('assignedRole').value = data.role;
+                document.getElementById('dutyDate').value = data.eventDate;
+                document.getElementById('dutyTime').value = data.eventTime;
+            }
         }
 
         function startLiveLocationTracking() {
             if ("geolocation" in navigator) {
+                if (watchId) navigator.geolocation.clearWatch(watchId);
                 watchId = navigator.geolocation.watchPosition(
                     (pos) => {
                         if (currentUserKey) {
@@ -353,19 +482,32 @@
             }
         }
 
+        // ================= PUNCH OUT & TERMINATE ACTIVE SESSION =================
         function handleLogout() {
-            if (confirm("Punch out and end your shift?")) {
-                if (watchId) navigator.geolocation.clearWatch(watchId);
+            if (confirm("Are you sure you want to punch out and end your shift?")) {
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+
+                const punchOutTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
                 if (currentUserKey) {
                     db.ref('sessions/' + currentUserKey).update({
-                        punchOut: new Date().toLocaleTimeString(),
-                        isActive: false
+                        punchOut: punchOutTimestamp,
+                        isActive: false,
+                        lastSeen: punchOutTimestamp
                     });
                 }
+
+                // Remove persistent key so login is required on next visit
+                localStorage.removeItem('eav_active_session_key');
                 currentUserKey = null;
+
                 document.getElementById('userPortalSection').classList.add('hidden');
                 document.getElementById('navUserBadge').classList.add('hidden');
                 document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('formEmployeeLogin').reset();
             }
         }
 
@@ -382,7 +524,7 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD & REALTIME LISTENER =================
+        // ================= ADMIN DASHBOARD & ROSTER MANAGEMENT =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -390,6 +532,7 @@
                 document.getElementById('adminDashboardSection').classList.remove('hidden');
                 initMap();
                 listenToCloudData();
+                listenToRegisteredEmployees();
             } else {
                 document.getElementById('adminError').classList.remove('hidden');
             }
@@ -398,6 +541,46 @@
         function logoutAdmin() {
             document.getElementById('adminDashboardSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function addRegisteredEmployee(e) {
+            e.preventDefault();
+            const empId = document.getElementById('newEmpId').value.trim().toUpperCase();
+            const empName = document.getElementById('newEmpName').value.trim();
+
+            db.ref('registered_employees/' + empId).set({ name: empName }, (err) => {
+                if (!err) {
+                    document.getElementById('newEmpId').value = '';
+                    document.getElementById('newEmpName').value = '';
+                    alert(`Employee ${empName} (${empId}) registered successfully!`);
+                }
+            });
+        }
+
+        function removeRegisteredEmployee(empId) {
+            if (confirm(`Remove ${empId} from authorized employees?`)) {
+                db.ref('registered_employees/' + empId).remove();
+            }
+        }
+
+        function listenToRegisteredEmployees() {
+            db.ref('registered_employees').on('value', (snapshot) => {
+                const listDiv = document.getElementById('registeredEmployeesList');
+                listDiv.innerHTML = '';
+                const data = snapshot.val() || {};
+
+                Object.keys(data).forEach((id) => {
+                    const badge = document.createElement('div');
+                    badge.className = "flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-900 px-3 py-1.5 rounded-lg text-xs font-semibold";
+                    badge.innerHTML = `
+                        <span><strong>${id}</strong>: ${data[id].name}</span>
+                        <button onclick="removeRegisteredEmployee('${id}')" class="text-rose-500 hover:text-rose-700 ml-1" title="Delete">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    `;
+                    listDiv.appendChild(badge);
+                });
+            });
         }
 
         function initMap() {
@@ -410,13 +593,13 @@
             }, 300);
         }
 
+        // ================= REAL-TIME TABLE AUDIT WITH DISTINCT PUNCH-IN & PUNCH-OUT =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
                 const tableBody = document.getElementById('adminAuditTableBody');
                 tableBody.innerHTML = '';
 
-                // Clear previous map markers
                 for (let key in mapMarkers) {
                     leafletMap.removeLayer(mapMarkers[key]);
                 }
@@ -427,7 +610,8 @@
                     const s = data[key];
                     let pinColor = s.type === 'Cab Driver' ? '#f59e0b' : (s.type === 'Guest' ? '#10b981' : '#4f46e5');
 
-                    if (s.lat && s.lng) {
+                    // Map Marker
+                    if (s.lat && s.lng && s.isActive) {
                         bounds.push([s.lat, s.lng]);
                         const marker = L.circleMarker([s.lat, s.lng], {
                             radius: 8,
@@ -441,6 +625,14 @@
                         mapMarkers[key] = marker;
                     }
 
+                    // Format Punch Out Column Text
+                    let punchOutDisplay = "";
+                    if (s.isActive) {
+                        punchOutDisplay = `<span class="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> On Duty (Active)</span>`;
+                    } else {
+                        punchOutDisplay = `<span class="font-mono text-rose-600 font-semibold">${s.punchOut || '--'}</span>`;
+                    }
+
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50";
                     tr.innerHTML = `
@@ -452,8 +644,15 @@
                             <div class="font-semibold text-slate-800">${s.venue}</div>
                             <div class="text-slate-500">${s.role}</div>
                         </td>
-                        <td class="p-3 font-mono text-emerald-600 font-semibold">${s.punchIn}</td>
-                        <td class="p-3 font-semibold ${s.isActive ? 'text-amber-600' : 'text-slate-400'}">${s.isActive ? '🟢 Active' : '🔴 Punched Out'}</td>
+                        <td class="p-3 bg-emerald-50/40 border-l border-emerald-100 font-mono text-emerald-700 font-bold">
+                            ${s.punchIn}
+                        </td>
+                        <td class="p-3 bg-rose-50/40 border-l border-rose-100">
+                            ${punchOutDisplay}
+                        </td>
+                        <td class="p-3 font-semibold">
+                            ${s.isActive ? '<span class="text-emerald-600 font-bold">🟢 Active</span>' : '<span class="text-slate-400 font-medium">🔴 Closed</span>'}
+                        </td>
                         <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">
                             ${s.lat ? `<a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 underline font-semibold">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)} (Open Map)</a>` : '<span class="text-slate-400">Waiting for GPS...</span>'}
                         </td>
