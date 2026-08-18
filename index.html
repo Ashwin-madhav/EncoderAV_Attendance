@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Enterprise Event & Fleet Portal</title>
+    <title>EAV Live Fleet & Staff Portal</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <!-- Leaflet Map CSS & JS for Admin Live Map -->
+    <!-- Leaflet Map CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Firebase Realtime Database SDKs (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
         #adminLiveMap { height: 420px; z-index: 10; border-radius: 1rem; }
     </style>
@@ -22,11 +28,11 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <div class="bg-white text-indigo-700 p-2 rounded-xl shadow-md">
-                    <i class="fa-solid fa-location-crosshairs text-xl"></i>
+                    <i class="fa-solid fa-cloud-bolt text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg leading-none">FleetSync Pro</h1>
-                    <span class="text-xs text-indigo-200">Live Attendance & Fleet Tracking</span>
+                    <h1 class="font-bold text-lg leading-none">EAV Attendance Cloud</h1>
+                    <span class="text-xs text-indigo-200">Live Multi-Device Staff & Fleet Tracking</span>
                 </div>
             </div>
 
@@ -36,7 +42,7 @@
                     <div id="navUserRole" class="text-xs text-indigo-200"></div>
                 </div>
                 <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1.5">
-                    <i class="fa-solid fa-power-off"></i> Punch Out & Logout
+                    <i class="fa-solid fa-power-off"></i> Punch Out
                 </button>
             </div>
         </div>
@@ -49,14 +55,14 @@
             <div class="bg-indigo-600 p-6 text-white text-center">
                 <i class="fa-solid fa-shield-halved text-4xl mb-2 text-indigo-200"></i>
                 <h2 class="text-2xl font-bold">Portal Access</h2>
-                <p class="text-xs text-indigo-100 mt-1">Select your access mode to continue</p>
+                <p class="text-xs text-indigo-100 mt-1">Select your access mode</p>
             </div>
 
             <!-- Login Tabs -->
             <div class="flex border-b border-slate-200 text-xs font-semibold text-center bg-slate-50">
-                <button onclick="switchLoginTab('employee')" id="tabEmp" class="flex-1 py-3 border-b-2 border-indigo-600 text-indigo-600">Employee</button>
+                <button onclick="switchLoginTab('employee')" id="tabEmp" class="flex-1 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold">Employee</button>
                 <button onclick="switchLoginTab('driver')" id="tabDriver" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Cab Driver</button>
-                <button onclick="switchLoginTab('guest')" id="tabGuest" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Guest / Contractor</button>
+                <button onclick="switchLoginTab('guest')" id="tabGuest" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Guest</button>
                 <button onclick="switchLoginTab('admin')" id="tabAdmin" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Admin</button>
             </div>
 
@@ -65,13 +71,13 @@
                 <form id="formEmployeeLogin" onsubmit="loginEmployee(event)" class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Employee ID</label>
-                        <input type="text" id="empId" required value="EMP-1024" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        <input type="text" id="empId" required placeholder="EMP-101" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
                         <input type="text" id="empFullName" required placeholder="e.g. Alex Morgan" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition">
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow">
                         <i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In
                     </button>
                 </form>
@@ -86,7 +92,7 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Vehicle / Cab Number</label>
                         <input type="text" id="cabNumber" required placeholder="e.g. KA-01-AB-1234" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition">
+                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition shadow">
                         <i class="fa-solid fa-taxi mr-2"></i> Start Cab Shift & Track GPS
                     </button>
                 </form>
@@ -105,8 +111,8 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Phone</label>
                         <input type="tel" id="guestPhone" required placeholder="e.g. +1 555-0199" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition">
-                        <i class="fa-solid fa-id-badge mr-2"></i> Guest / Contractor Punch-In
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition shadow">
+                        <i class="fa-solid fa-id-badge mr-2"></i> Guest Punch-In
                     </button>
                 </form>
 
@@ -117,8 +123,8 @@
                         <input type="password" id="adminPassword" required placeholder="Default: admin123" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
                     <p id="adminError" class="text-xs text-rose-500 hidden font-semibold">Invalid admin passcode!</p>
-                    <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-lg font-semibold text-sm transition">
-                        <i class="fa-solid fa-lock-open mr-2"></i> Access Admin Command Center
+                    <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-lg font-semibold text-sm transition shadow">
+                        <i class="fa-solid fa-lock-open mr-2"></i> Access Admin Dashboard
                     </button>
                 </form>
             </div>
@@ -126,11 +132,10 @@
 
         <!-- ================= 2. EMPLOYEE / GUEST PORTAL ================= -->
         <section id="userPortalSection" class="hidden max-w-3xl mx-auto space-y-6">
-            <!-- Active Status Banner -->
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-emerald-800 bg-opacity-40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live GPS Tracking Active
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Tracking Active
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
@@ -142,13 +147,9 @@
                 </div>
             </div>
 
-            <!-- Event Details Submission Form -->
+            <!-- Event Form -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 p-6 md:p-8">
-                <div class="border-b border-slate-100 pb-4 mb-6">
-                    <h3 class="text-xl font-bold text-slate-800">Event Duty & Venue Submission</h3>
-                    <p class="text-xs text-slate-500 mt-1">Submit your specific event assignment for this shift.</p>
-                </div>
-
+                <h3 class="text-xl font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">Event Duty & Venue Submission</h3>
                 <form id="eventDutyForm" onsubmit="submitEventDetails(event)" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -156,17 +157,16 @@
                             <select id="assignedRole" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                 <option value="" disabled selected>Choose Role</option>
                                 <option value="Event Coordinator">Event Coordinator</option>
-                                <option value="Venue In-charge">Venue In-charge</option>
+                                <option value="Venue Lead">Venue Lead</option>
                                 <option value="Technical Support">Technical Support</option>
-                                <option value="Catering & Hospitality">Catering & Hospitality</option>
-                                <option value="Security / Access Control">Security / Access Control</option>
+                                <option value="Catering Staff">Catering Staff</option>
                                 <option value="Cab & Fleet Driver">Cab & Fleet Driver</option>
-                                <option value="General Volunteer">General Volunteer</option>
+                                <option value="Volunteer">Volunteer</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Event Venue *</label>
-                            <input type="text" id="dutyVenue" required placeholder="e.g. Grand Ball Room - Gate 4" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                            <input type="text" id="dutyVenue" required placeholder="e.g. Hall A, Grand Expo" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Event Date *</label>
@@ -177,103 +177,83 @@
                             <input type="time" id="dutyTime" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                     </div>
-
-                    <div class="pt-4">
-                        <button type="submit" id="dutySubmitBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Confirm & Log Event Duty
-                        </button>
-                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Update Event Duty to Cloud
+                    </button>
                 </form>
-
-                <!-- Receipt of Event Duty -->
-                <div id="dutySuccessReceipt" class="hidden mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-                    <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm">
-                        <i class="fa-solid fa-circle-check text-lg text-emerald-600"></i> Event Submission Recorded Successfully!
-                    </div>
-                    <p class="text-xs text-slate-600 mt-2">Your shift coordinates and event duties have been securely synced to Admin logs.</p>
+                <div id="dutySuccessReceipt" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Synced to Cloud! Admin can now view your location in real time.
                 </div>
             </div>
         </section>
 
-        <!-- ================= 3. ADMIN DASHBOARD & LIVE TRACKING ================= -->
+        <!-- ================= 3. ADMIN DASHBOARD ================= -->
         <section id="adminDashboardSection" class="hidden space-y-6">
-            <!-- Header bar -->
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-800">Admin Control Center</h2>
-                    <p class="text-xs text-slate-500">Live GPS map, employee punches, contractors, and cab tracking.</p>
+                    <h2 class="text-2xl font-black text-slate-800">Admin Command Center (Mac / Cloud)</h2>
+                    <p class="text-xs text-slate-500">Live multi-device staff tracking across phones, tabs, and cabs.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="renderAdminViews()" class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition">
-                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Map
-                    </button>
-                    <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition">
-                        <i class="fa-solid fa-download mr-1"></i> Export Logs CSV
-                    </button>
                     <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
                         Logout Admin
                     </button>
                 </div>
             </div>
 
-            <!-- LIVE MAP CONTAINER -->
+            <!-- LIVE MAP -->
             <div class="bg-white p-4 md:p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
-                        <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Live Fleet & Staff Spatial Map
-                    </h3>
-                    <div class="flex items-center gap-4 text-xs font-semibold">
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span> Employees</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Cab Drivers</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span> Guests</span>
-                    </div>
-                </div>
+                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                    <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Live Cloud Fleet Map
+                </h3>
                 <div id="adminLiveMap"></div>
             </div>
 
-            <!-- ATTENDANCE & PUNCH AUDIT TABLE -->
+            <!-- LIVE DATA TABLE -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Staff & Fleet Audit Logs</h3>
-                    <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline font-semibold">Clear All History</button>
-                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                                <th class="p-3">User & Category</th>
-                                <th class="p-3">Event Venue & Role</th>
-                                <th class="p-3">Punch-In Time</th>
-                                <th class="p-3">Punch-Out Time</th>
-                                <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">Live / Last GPS (Admin Only)</th>
+                                <th class="p-3">User</th>
+                                <th class="p-3">Role & Venue</th>
+                                <th class="p-3">Punch-In</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">Live GPS Location</th>
                             </tr>
                         </thead>
-                        <tbody id="adminAuditTableBody" class="divide-y divide-slate-100">
-                            <!-- Injected by script -->
-                        </tbody>
+                        <tbody id="adminAuditTableBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
             </div>
         </section>
-
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500">
-        Enterprise Live Tracking System &bull; Geolocation Data strictly restricted to authorized admin oversight.
-    </footer>
-
-    <!-- ================= SCRIPT LOGIC ================= -->
+    <!-- ================= SCRIPT LOGIC WITH YOUR LIVE FIREBASE ================= -->
     <script>
-        // Data Structures & State
-        let currentUser = null;
+        // YOUR LIVE FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyADLxNyjda3Vt1xehQudwNSyjKyhxd0cc4",
+            authDomain: "eavattendance.firebaseapp.com",
+            databaseURL: "https://eavattendance-default-rtdb.firebaseio.com",
+            projectId: "eavattendance",
+            storageBucket: "eavattendance.firebasestorage.app",
+            messagingSenderId: "375514119240",
+            appId: "1:375514119240:web:752937f8790bda41c02c7d",
+            measurementId: "G-L1HBTD3T7R"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUserKey = null;
         let watchId = null;
         let leafletMap = null;
         let mapMarkers = {};
-
         const ADMIN_PASSCODE = "admin123";
 
-        // Tab Switching in Login
+        // Tab Switching
         function switchLoginTab(tab) {
             const tabs = ['tabEmp', 'tabDriver', 'tabGuest', 'tabAdmin'];
             const forms = ['formEmployeeLogin', 'formDriverLogin', 'formGuestLogin', 'formAdminLogin'];
@@ -296,19 +276,19 @@
             }
         }
 
-        // ================= AUTHENTICATION & LOGIN =================
+        // ================= AUTHENTICATION & CLOUD SYNC =================
         function loginEmployee(e) {
             e.preventDefault();
             const id = document.getElementById('empId').value;
             const name = document.getElementById('empFullName').value;
-            startUserSession({ id, name, type: 'Employee', subInfo: `ID: ${id}` });
+            startSession({ id, name, type: 'Employee', subInfo: `ID: ${id}` });
         }
 
         function loginDriver(e) {
             e.preventDefault();
             const name = document.getElementById('driverName').value;
             const cabNo = document.getElementById('cabNumber').value;
-            startUserSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` });
+            startSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` });
         }
 
         function loginGuest(e) {
@@ -316,17 +296,22 @@
             const name = document.getElementById('guestName').value;
             const company = document.getElementById('guestCompany').value;
             const phone = document.getElementById('guestPhone').value;
-            startUserSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest / Contractor', subInfo: `${company} (${phone})` });
+            startSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` });
         }
 
-        function startUserSession(userData) {
-            const punchInTime = new Date().toLocaleString();
-            currentUser = {
+        function startSession(userData) {
+            const punchInTime = new Date().toLocaleTimeString();
+            
+            // Push record to Firebase Realtime Database
+            const newRef = db.ref('sessions').push();
+            currentUserKey = newRef.key;
+
+            const sessionData = {
                 ...userData,
                 punchIn: punchInTime,
                 punchOut: 'Active (On Duty)',
-                venue: 'Not Specified',
-                role: userData.type === 'Cab Driver' ? 'Fleet / Cab Driver' : 'Pending Assignment',
+                venue: 'Pending Venue Submission',
+                role: userData.type === 'Cab Driver' ? 'Cab Driver' : 'Pending Role',
                 eventDate: new Date().toISOString().slice(0, 10),
                 eventTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 lat: null,
@@ -335,94 +320,76 @@
                 isActive: true
             };
 
-            // Save in storage
-            saveOrUpdateSession(currentUser);
+            newRef.set(sessionData);
 
-            // Start Real-time continuous Geolocation tracking
+            // Start Live Location Watching on Phone
             startLiveLocationTracking();
 
             // Transition UI
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('userPortalSection').classList.remove('hidden');
             document.getElementById('navUserBadge').classList.remove('hidden');
-
-            document.getElementById('navUserName').innerText = currentUser.name;
-            document.getElementById('navUserRole').innerText = `${currentUser.type} • ${currentUser.subInfo}`;
-            document.getElementById('userWelcomeTitle').innerText = `Hello, ${currentUser.name}!`;
-            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${currentUser.punchIn} | Category: ${currentUser.type}`;
+            document.getElementById('navUserName').innerText = userData.name;
+            document.getElementById('navUserRole').innerText = `${userData.type}`;
+            document.getElementById('userWelcomeTitle').innerText = `Hello, ${userData.name}!`;
+            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${punchInTime}`;
         }
 
-        // ================= CONTINUOUS GEOLOCATION (WATCH POSITION) =================
         function startLiveLocationTracking() {
             if ("geolocation" in navigator) {
                 watchId = navigator.geolocation.watchPosition(
-                    (position) => {
-                        currentUser.lat = position.coords.latitude;
-                        currentUser.lng = position.coords.longitude;
-                        currentUser.lastSeen = new Date().toLocaleTimeString();
-                        saveOrUpdateSession(currentUser);
+                    (pos) => {
+                        if (currentUserKey) {
+                            db.ref('sessions/' + currentUserKey).update({
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude,
+                                lastSeen: new Date().toLocaleTimeString()
+                            });
+                        }
                     },
-                    (error) => {
-                        console.warn("Location tracking permission denied or unavailable:", error.message);
-                    },
-                    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+                    (err) => console.warn("GPS tracking warning:", err.message),
+                    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
                 );
             }
         }
 
         function handleLogout() {
-            if (confirm("Are you sure you want to punch out and end your shift?")) {
+            if (confirm("Punch out and end your shift?")) {
                 if (watchId) navigator.geolocation.clearWatch(watchId);
-                currentUser.punchOut = new Date().toLocaleString();
-                currentUser.isActive = false;
-                saveOrUpdateSession(currentUser);
-
-                currentUser = null;
+                if (currentUserKey) {
+                    db.ref('sessions/' + currentUserKey).update({
+                        punchOut: new Date().toLocaleTimeString(),
+                        isActive: false
+                    });
+                }
+                currentUserKey = null;
                 document.getElementById('userPortalSection').classList.add('hidden');
                 document.getElementById('navUserBadge').classList.add('hidden');
                 document.getElementById('loginSection').classList.remove('hidden');
-                document.getElementById('dutySuccessReceipt').classList.add('hidden');
             }
         }
 
-        // ================= EVENT FORM SUBMISSION =================
         function submitEventDetails(e) {
             e.preventDefault();
-            currentUser.role = document.getElementById('assignedRole').value;
-            currentUser.venue = document.getElementById('dutyVenue').value;
-            currentUser.eventDate = document.getElementById('dutyDate').value;
-            currentUser.eventTime = document.getElementById('dutyTime').value;
-
-            saveOrUpdateSession(currentUser);
-            document.getElementById('dutySuccessReceipt').classList.remove('hidden');
-        }
-
-        // Storage helpers
-        function getSessions() {
-            return JSON.parse(localStorage.getItem('fleet_sync_sessions') || '[]');
-        }
-
-        function saveOrUpdateSession(user) {
-            let list = getSessions();
-            const idx = list.findIndex(item => item.id === user.id && item.punchIn === user.punchIn);
-            if (idx >= 0) {
-                list[idx] = user;
-            } else {
-                list.unshift(user);
+            if (currentUserKey) {
+                db.ref('sessions/' + currentUserKey).update({
+                    role: document.getElementById('assignedRole').value,
+                    venue: document.getElementById('dutyVenue').value,
+                    eventDate: document.getElementById('dutyDate').value,
+                    eventTime: document.getElementById('dutyTime').value
+                });
+                document.getElementById('dutySuccessReceipt').classList.remove('hidden');
             }
-            localStorage.setItem('fleet_sync_sessions', JSON.stringify(list));
         }
 
-        // ================= ADMIN DASHBOARD & MAP =================
+        // ================= ADMIN DASHBOARD & REALTIME LISTENER =================
         function loginAdmin(e) {
             e.preventDefault();
-            const pass = document.getElementById('adminPassword').value;
-            if (pass === ADMIN_PASSCODE) {
+            if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('adminDashboardSection').classList.remove('hidden');
-                document.getElementById('adminError').classList.add('hidden');
                 initMap();
-                renderAdminViews();
+                listenToCloudData();
             } else {
                 document.getElementById('adminError').classList.remove('hidden');
             }
@@ -435,136 +402,67 @@
 
         function initMap() {
             if (!leafletMap) {
-                // Default coordinates (e.g. New Delhi / Global Center)
-                leafletMap = L.map('adminLiveMap').setView([28.6139, 77.2090], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(leafletMap);
+                leafletMap = L.map('adminLiveMap').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
             }
+            setTimeout(() => {
+                if (leafletMap) leafletMap.invalidateSize();
+            }, 300);
         }
 
-        function renderAdminViews() {
-            const sessions = getSessions();
-            const tableBody = document.getElementById('adminAuditTableBody');
-            tableBody.innerHTML = '';
+        function listenToCloudData() {
+            db.ref('sessions').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const tableBody = document.getElementById('adminAuditTableBody');
+                tableBody.innerHTML = '';
 
-            let bounds = [];
-
-            // Clear old map markers
-            for (let id in mapMarkers) {
-                leafletMap.removeLayer(mapMarkers[id]);
-            }
-            mapMarkers = {};
-
-            if (sessions.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No records found.</td></tr>`;
-                return;
-            }
-
-            sessions.forEach((s) => {
-                // Map Marker Color By Role
-                let colorClass = "bg-indigo-100 text-indigo-800";
-                let markerIcon = "fa-user";
-                let pinColor = "#4f46e5"; // Indigo
-
-                if (s.type === 'Cab Driver') {
-                    colorClass = "bg-amber-100 text-amber-800";
-                    markerIcon = "fa-taxi";
-                    pinColor = "#f59e0b"; // Amber
-                } else if (s.type === 'Guest / Contractor') {
-                    colorClass = "bg-emerald-100 text-emerald-800";
-                    markerIcon = "fa-id-badge";
-                    pinColor = "#10b981"; // Emerald
+                // Clear previous map markers
+                for (let key in mapMarkers) {
+                    leafletMap.removeLayer(mapMarkers[key]);
                 }
+                mapMarkers = {};
+                let bounds = [];
 
-                // Place Pin on Map if GPS Lat/Lng exists
-                if (s.lat && s.lng) {
-                    bounds.push([s.lat, s.lng]);
-                    const marker = L.circleMarker([s.lat, s.lng], {
-                        radius: 9,
-                        fillColor: pinColor,
-                        color: "#fff",
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.9
-                    }).addTo(leafletMap);
+                Object.keys(data).reverse().forEach((key) => {
+                    const s = data[key];
+                    let pinColor = s.type === 'Cab Driver' ? '#f59e0b' : (s.type === 'Guest' ? '#10b981' : '#4f46e5');
 
-                    marker.bindPopup(`
-                        <div class="text-xs">
-                            <strong style="color:${pinColor}">${s.name} (${s.type})</strong><br/>
-                            ${s.subInfo}<br/>
-                            <strong>Venue:</strong> ${s.venue}<br/>
-                            <strong>Last GPS Ping:</strong> ${s.lastSeen}
-                        </div>
-                    `);
-                    mapMarkers[s.id] = marker;
-                }
+                    if (s.lat && s.lng) {
+                        bounds.push([s.lat, s.lng]);
+                        const marker = L.circleMarker([s.lat, s.lng], {
+                            radius: 8,
+                            fillColor: pinColor,
+                            color: '#fff',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        }).addTo(leafletMap);
 
-                // Location Table markup
-                let locationMarkup = "";
-                if (s.lat && s.lng) {
-                    locationMarkup = `
-                        <div>
-                            <span class="font-mono font-bold text-slate-800">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span>
-                            <span class="text-[10px] text-slate-400 block">Ping: ${s.lastSeen}</span>
-                            <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> View on Maps
-                            </a>
-                        </div>
+                        marker.bindPopup(`<b>${s.name}</b> (${s.type})<br/>${s.venue}<br/>Last Seen: ${s.lastSeen}`);
+                        mapMarkers[key] = marker;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50";
+                    tr.innerHTML = `
+                        <td class="p-3">
+                            <div class="font-bold text-slate-900">${s.name}</div>
+                            <div class="text-[10px] text-slate-400 font-semibold">${s.type} &bull; ${s.subInfo}</div>
+                        </td>
+                        <td class="p-3">
+                            <div class="font-semibold text-slate-800">${s.venue}</div>
+                            <div class="text-slate-500">${s.role}</div>
+                        </td>
+                        <td class="p-3 font-mono text-emerald-600 font-semibold">${s.punchIn}</td>
+                        <td class="p-3 font-semibold ${s.isActive ? 'text-amber-600' : 'text-slate-400'}">${s.isActive ? '🟢 Active' : '🔴 Punched Out'}</td>
+                        <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">
+                            ${s.lat ? `<a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 underline font-semibold">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)} (Open Map)</a>` : '<span class="text-slate-400">Waiting for GPS...</span>'}
+                        </td>
                     `;
-                } else {
-                    locationMarkup = `<span class="text-slate-400 italic">No GPS coordinates recorded</span>`;
-                }
+                    tableBody.appendChild(tr);
+                });
 
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                tr.innerHTML = `
-                    <td class="p-3">
-                        <div class="font-bold text-slate-900">${s.name}</div>
-                        <span class="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold ${colorClass}">
-                            <i class="fa-solid ${markerIcon} mr-1"></i>${s.type}
-                        </span>
-                        <div class="text-[11px] text-slate-400">${s.subInfo}</div>
-                    </td>
-                    <td class="p-3">
-                        <div class="font-semibold text-slate-800">${s.venue}</div>
-                        <div class="text-slate-500">${s.role}</div>
-                        <div class="text-[11px] text-slate-400 font-mono">${s.eventDate} ${s.eventTime}</div>
-                    </td>
-                    <td class="p-3 font-mono text-emerald-600 font-semibold">${s.punchIn}</td>
-                    <td class="p-3 font-mono font-semibold ${s.punchOut.includes('Active') ? 'text-amber-600' : 'text-rose-600'}">${s.punchOut}</td>
-                    <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">${locationMarkup}</td>
-                `;
-                tableBody.appendChild(tr);
+                if (bounds.length > 0) leafletMap.fitBounds(bounds, { padding: [50, 50] });
             });
-
-            // Auto-fit map bounds to markers
-            if (bounds.length > 0) {
-                leafletMap.fitBounds(bounds, { padding: [40, 40] });
-            }
-        }
-
-        function clearAuditLogs() {
-            if (confirm("Clear all punch and audit history?")) {
-                localStorage.removeItem('fleet_sync_sessions');
-                renderAdminViews();
-            }
-        }
-
-        function exportCSV() {
-            const data = getSessions();
-            if (!data.length) return alert("No data to export");
-
-            let csv = "ID,Name,Type,Details,Role,Venue,Date,Time,Punch In,Punch Out,Latitude,Longitude,Last Ping\n";
-            data.forEach(d => {
-                csv += `"${d.id}","${d.name}","${d.type}","${d.subInfo}","${d.role}","${d.venue}","${d.eventDate}","${d.eventTime}","${d.punchIn}","${d.punchOut}","${d.lat || ''}","${d.lng || ''}","${d.lastSeen}"\n`;
-            });
-
-            const link = document.createElement("a");
-            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-            link.download = `Fleet_Attendance_Logs_${new Date().toISOString().slice(0,10)}.csv`;
-            link.click();
         }
     </script>
 </body>
