@@ -3,394 +3,568 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Employee Event Check-In Portal</title>
-    <!-- Tailwind CSS for modern styling -->
+    <title>Enterprise Event & Fleet Portal</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Leaflet Map CSS & JS for Admin Live Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #adminLiveMap { height: 420px; z-index: 10; border-radius: 1rem; }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col justify-between font-sans">
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col font-sans">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-indigo-600 text-white shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+    <!-- Top Navigation Header -->
+    <header class="bg-indigo-700 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-calendar-check text-2xl"></i>
-                <h1 class="font-bold text-xl tracking-wide">StaffSync Portal</h1>
+                <div class="bg-white text-indigo-700 p-2 rounded-xl shadow-md">
+                    <i class="fa-solid fa-location-crosshairs text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none">FleetSync Pro</h1>
+                    <span class="text-xs text-indigo-200">Live Attendance & Fleet Tracking</span>
+                </div>
             </div>
-            <div>
-                <button id="navBtn" onclick="toggleView()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition duration-200 shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-lock"></i>
-                    <span id="navBtnText">Admin Login</span>
+
+            <div id="navUserBadge" class="hidden flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <div id="navUserName" class="font-bold text-sm leading-tight"></div>
+                    <div id="navUserRole" class="text-xs text-indigo-200"></div>
+                </div>
+                <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-power-off"></i> Punch Out & Logout
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto w-full p-4 md:p-8 flex-grow">
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-8 flex-grow">
 
-        <!-- ================= EMPLOYEE FORM SECTION ================= -->
-        <section id="employeeSection" class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
-                <h2 class="text-2xl font-bold">Employee Event Check-in</h2>
-                <p class="text-indigo-100 text-sm mt-1">Please enter your event assignment details below.</p>
+        <!-- ================= 1. LOGIN SECTION ================= -->
+        <section id="loginSection" class="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 my-8">
+            <div class="bg-indigo-600 p-6 text-white text-center">
+                <i class="fa-solid fa-shield-halved text-4xl mb-2 text-indigo-200"></i>
+                <h2 class="text-2xl font-bold">Portal Access</h2>
+                <p class="text-xs text-indigo-100 mt-1">Select your access mode to continue</p>
             </div>
 
-            <form id="checkinForm" onsubmit="handleFormSubmit(event)" class="p-6 md:p-8 space-y-6">
-                <!-- Status/Alert Box -->
-                <div id="statusAlert" class="hidden rounded-lg p-4 text-sm font-medium"></div>
+            <!-- Login Tabs -->
+            <div class="flex border-b border-slate-200 text-xs font-semibold text-center bg-slate-50">
+                <button onclick="switchLoginTab('employee')" id="tabEmp" class="flex-1 py-3 border-b-2 border-indigo-600 text-indigo-600">Employee</button>
+                <button onclick="switchLoginTab('driver')" id="tabDriver" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Cab Driver</button>
+                <button onclick="switchLoginTab('guest')" id="tabGuest" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Guest / Contractor</button>
+                <button onclick="switchLoginTab('admin')" id="tabAdmin" class="flex-1 py-3 text-slate-500 hover:text-indigo-600">Admin</button>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Full Name -->
+            <div class="p-6">
+                <!-- A. Employee Login -->
+                <form id="formEmployeeLogin" onsubmit="loginEmployee(event)" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1" for="empName">Employee Name *</label>
-                        <input type="text" id="empName" required placeholder="e.g. John Doe" 
-                            class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Employee ID</label>
+                        <input type="text" id="empId" required value="EMP-1024" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-
-                    <!-- Role -->
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1" for="empRole">Your Role *</label>
-                        <select id="empRole" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-                            <option value="" disabled selected>Select Role</option>
-                            <option value="Event Coordinator">Event Coordinator</option>
-                            <option value="Venue Lead">Venue Lead</option>
-                            <option value="Technical Support">Technical Support</option>
-                            <option value="Security / Logistics">Security / Logistics</option>
-                            <option value="Volunteer / Staff">Volunteer / Staff</option>
-                        </select>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
+                        <input type="text" id="empFullName" required placeholder="e.g. Alex Morgan" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-
-                    <!-- Event Venue -->
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1" for="eventVenue">Event Venue *</label>
-                        <input type="text" id="eventVenue" required placeholder="e.g. Hall A, Grand Convention Center" 
-                            class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-                    </div>
-
-                    <!-- Event Date -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1" for="eventDate">Event Date *</label>
-                        <input type="date" id="eventDate" required 
-                            class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-                    </div>
-
-                    <!-- Event Time -->
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1" for="eventTime">Event Time *</label>
-                        <input type="time" id="eventTime" required 
-                            class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-slate-200 flex flex-col items-center">
-                    <button type="submit" id="submitBtn" class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span>Submit Details</span>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition">
+                        <i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In
                     </button>
-                    <p class="text-xs text-slate-500 mt-2">
-                        <i class="fa-solid fa-shield-halved text-indigo-500"></i> Your current location and time are verified for attendance security.
-                    </p>
-                </div>
-            </form>
+                </form>
 
-            <!-- Employee Success Summary Card (Shown after submit) -->
-            <div id="employeeReceipt" class="hidden p-6 md:p-8 bg-emerald-50 border-t border-emerald-200">
-                <div class="flex items-center gap-3 text-emerald-700 mb-4">
-                    <i class="fa-solid fa-circle-check text-2xl"></i>
-                    <h3 class="text-lg font-bold">Submission Confirmed!</h3>
+                <!-- B. Cab Driver Login -->
+                <form id="formDriverLogin" onsubmit="loginDriver(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Driver Name</label>
+                        <input type="text" id="driverName" required placeholder="e.g. David Miller" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Vehicle / Cab Number</label>
+                        <input type="text" id="cabNumber" required placeholder="e.g. KA-01-AB-1234" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition">
+                        <i class="fa-solid fa-taxi mr-2"></i> Start Cab Shift & Track GPS
+                    </button>
+                </form>
+
+                <!-- C. Guest / Contractor Login -->
+                <form id="formGuestLogin" onsubmit="loginGuest(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
+                        <input type="text" id="guestName" required placeholder="e.g. Sarah Connor" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Company / Agency Name</label>
+                        <input type="text" id="guestCompany" required placeholder="e.g. Apex Caterers" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Phone</label>
+                        <input type="tel" id="guestPhone" required placeholder="e.g. +1 555-0199" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition">
+                        <i class="fa-solid fa-id-badge mr-2"></i> Guest / Contractor Punch-In
+                    </button>
+                </form>
+
+                <!-- D. Admin Login -->
+                <form id="formAdminLogin" onsubmit="loginAdmin(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Admin Passcode</label>
+                        <input type="password" id="adminPassword" required placeholder="Default: admin123" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    </div>
+                    <p id="adminError" class="text-xs text-rose-500 hidden font-semibold">Invalid admin passcode!</p>
+                    <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-lg font-semibold text-sm transition">
+                        <i class="fa-solid fa-lock-open mr-2"></i> Access Admin Command Center
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================= 2. EMPLOYEE / GUEST PORTAL ================= -->
+        <section id="userPortalSection" class="hidden max-w-3xl mx-auto space-y-6">
+            <!-- Active Status Banner -->
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <div class="inline-flex items-center gap-2 bg-emerald-800 bg-opacity-40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live GPS Tracking Active
+                    </div>
+                    <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
+                    <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
                 </div>
-                <div id="receiptDetails" class="space-y-2 text-sm text-slate-700 bg-white p-4 rounded-lg border border-emerald-100 shadow-sm">
-                    <!-- Dynamic Details Injected Here -->
+                <div>
+                    <button onclick="handleLogout()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm shadow transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Punch Out
+                    </button>
+                </div>
+            </div>
+
+            <!-- Event Details Submission Form -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-200 p-6 md:p-8">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h3 class="text-xl font-bold text-slate-800">Event Duty & Venue Submission</h3>
+                    <p class="text-xs text-slate-500 mt-1">Submit your specific event assignment for this shift.</p>
+                </div>
+
+                <form id="eventDutyForm" onsubmit="submitEventDetails(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Designated Role *</label>
+                            <select id="assignedRole" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                <option value="" disabled selected>Choose Role</option>
+                                <option value="Event Coordinator">Event Coordinator</option>
+                                <option value="Venue In-charge">Venue In-charge</option>
+                                <option value="Technical Support">Technical Support</option>
+                                <option value="Catering & Hospitality">Catering & Hospitality</option>
+                                <option value="Security / Access Control">Security / Access Control</option>
+                                <option value="Cab & Fleet Driver">Cab & Fleet Driver</option>
+                                <option value="General Volunteer">General Volunteer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Event Venue *</label>
+                            <input type="text" id="dutyVenue" required placeholder="e.g. Grand Ball Room - Gate 4" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Event Date *</label>
+                            <input type="date" id="dutyDate" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Event Time *</label>
+                            <input type="time" id="dutyTime" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" id="dutySubmitBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Confirm & Log Event Duty
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Receipt of Event Duty -->
+                <div id="dutySuccessReceipt" class="hidden mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm">
+                        <i class="fa-solid fa-circle-check text-lg text-emerald-600"></i> Event Submission Recorded Successfully!
+                    </div>
+                    <p class="text-xs text-slate-600 mt-2">Your shift coordinates and event duties have been securely synced to Admin logs.</p>
                 </div>
             </div>
         </section>
 
-        <!-- ================= ADMIN PASSWORD MODAL ================= -->
-        <div id="adminAuthModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
-                <h3 class="text-lg font-bold text-slate-800 mb-2">Admin Authentication</h3>
-                <p class="text-xs text-slate-500 mb-4">Enter password to view employee location and logs.</p>
-                
-                <input type="password" id="adminPasswordInput" placeholder="Enter password (default: admin123)" 
-                    class="w-full px-4 py-2 border rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                
-                <p id="adminAuthError" class="text-red-500 text-xs hidden mb-3">Incorrect password. Try again.</p>
-
-                <div class="flex justify-end gap-2">
-                    <button onclick="closeAuthModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
-                    <button onclick="verifyAdminPassword()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Access</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= ADMIN DASHBOARD SECTION ================= -->
-        <section id="adminSection" class="hidden space-y-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-md border border-slate-200">
+        <!-- ================= 3. ADMIN DASHBOARD & LIVE TRACKING ================= -->
+        <section id="adminDashboardSection" class="hidden space-y-6">
+            <!-- Header bar -->
+            <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Admin Control Panel</h2>
-                    <p class="text-sm text-slate-500">Live check-in records & GPS coordinates</p>
+                    <h2 class="text-2xl font-black text-slate-800">Admin Control Center</h2>
+                    <p class="text-xs text-slate-500">Live GPS map, employee punches, contractors, and cab tracking.</p>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="clearAllData()" class="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-sm font-semibold transition">
-                        <i class="fa-solid fa-trash mr-1"></i> Clear Logs
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="renderAdminViews()" class="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Map
                     </button>
-                    <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm font-semibold transition">
-                        <i class="fa-solid fa-file-csv mr-1"></i> Export CSV
+                    <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition">
+                        <i class="fa-solid fa-download mr-1"></i> Export Logs CSV
+                    </button>
+                    <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
+                        Logout Admin
                     </button>
                 </div>
             </div>
 
-            <!-- Data Table -->
-            <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-slate-200">
+            <!-- LIVE MAP CONTAINER -->
+            <div class="bg-white p-4 md:p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                        <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Live Fleet & Staff Spatial Map
+                    </h3>
+                    <div class="flex items-center gap-4 text-xs font-semibold">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span> Employees</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Cab Drivers</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span> Guests</span>
+                    </div>
+                </div>
+                <div id="adminLiveMap"></div>
+            </div>
+
+            <!-- ATTENDANCE & PUNCH AUDIT TABLE -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">Staff & Fleet Audit Logs</h3>
+                    <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline font-semibold">Clear All History</button>
+                </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left text-xs border-collapse">
                         <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                <th class="p-4">Employee & Role</th>
-                                <th class="p-4">Event Venue</th>
-                                <th class="p-4">Scheduled Date/Time</th>
-                                <th class="p-4">Submission Time</th>
-                                <th class="p-4 bg-indigo-50 text-indigo-900 border-l border-indigo-100">
-                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Current Location (Admin Only)
-                                </th>
+                            <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                <th class="p-3">User & Category</th>
+                                <th class="p-3">Event Venue & Role</th>
+                                <th class="p-3">Punch-In Time</th>
+                                <th class="p-3">Punch-Out Time</th>
+                                <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">Live / Last GPS (Admin Only)</th>
                             </tr>
                         </thead>
-                        <tbody id="adminTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
-                            <!-- Injected by JavaScript -->
+                        <tbody id="adminAuditTableBody" class="divide-y divide-slate-100">
+                            <!-- Injected by script -->
                         </tbody>
                     </table>
-                </div>
-                <div id="noDataMessage" class="hidden p-8 text-center text-slate-400 text-sm">
-                    No submissions recorded yet.
                 </div>
             </div>
         </section>
 
     </main>
 
-    <footer class="bg-slate-200 text-slate-500 text-center py-4 text-xs">
-        Protected Location Portal &bull; Admin Password Default: <code class="font-bold">admin123</code>
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500">
+        Enterprise Live Tracking System &bull; Geolocation Data strictly restricted to authorized admin oversight.
     </footer>
 
-    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <!-- ================= SCRIPT LOGIC ================= -->
     <script>
-        // State variables
-        let isAdminLoggedIn = false;
-        const ADMIN_PASSCODE = "admin123"; // Change this if needed
+        // Data Structures & State
+        let currentUser = null;
+        let watchId = null;
+        let leafletMap = null;
+        let mapMarkers = {};
 
-        // Initialize from local storage or empty array
-        function getSubmissions() {
-            return JSON.parse(localStorage.getItem("employee_checkins") || "[]");
-        }
+        const ADMIN_PASSCODE = "admin123";
 
-        function saveSubmission(data) {
-            const list = getSubmissions();
-            list.unshift(data); // Add newest first
-            localStorage.setItem("employee_checkins", JSON.stringify(list));
-        }
+        // Tab Switching in Login
+        function switchLoginTab(tab) {
+            const tabs = ['tabEmp', 'tabDriver', 'tabGuest', 'tabAdmin'];
+            const forms = ['formEmployeeLogin', 'formDriverLogin', 'formGuestLogin', 'formAdminLogin'];
 
-        // Form Submit Handler
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            const submitBtn = document.getElementById("submitBtn");
-            const alertBox = document.getElementById("statusAlert");
+            tabs.forEach(t => document.getElementById(t).className = "flex-1 py-3 text-slate-500 hover:text-indigo-600");
+            forms.forEach(f => document.getElementById(f).classList.add('hidden'));
 
-            // Extract inputs
-            const name = document.getElementById("empName").value.trim();
-            const role = document.getElementById("empRole").value;
-            const venue = document.getElementById("eventVenue").value.trim();
-            const date = document.getElementById("eventDate").value;
-            const time = document.getElementById("eventTime").value;
-
-            // Loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Fetching Location & Submitting...`;
-
-            // Request Browser Geolocation
-            if (!navigator.geolocation) {
-                finalizeSubmission(name, role, venue, date, time, { status: "Not Supported", lat: null, lng: null });
-                return;
+            if (tab === 'employee') {
+                document.getElementById('tabEmp').className = "flex-1 py-3 border-b-2 border-indigo-600 text-indigo-600 font-bold";
+                document.getElementById('formEmployeeLogin').classList.remove('hidden');
+            } else if (tab === 'driver') {
+                document.getElementById('tabDriver').className = "flex-1 py-3 border-b-2 border-amber-500 text-amber-600 font-bold";
+                document.getElementById('formDriverLogin').classList.remove('hidden');
+            } else if (tab === 'guest') {
+                document.getElementById('tabGuest').className = "flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold";
+                document.getElementById('formGuestLogin').classList.remove('hidden');
+            } else if (tab === 'admin') {
+                document.getElementById('tabAdmin').className = "flex-1 py-3 border-b-2 border-slate-900 text-slate-900 font-bold";
+                document.getElementById('formAdminLogin').classList.remove('hidden');
             }
-
-            navigator.geolocation.getCurrentPosition(
-                // Success Callback
-                (position) => {
-                    const locationData = {
-                        status: "Success",
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        accuracy: Math.round(position.coords.accuracy) + " meters"
-                    };
-                    finalizeSubmission(name, role, venue, date, time, locationData);
-                },
-                // Error Callback
-                (error) => {
-                    let errReason = "Permission Denied";
-                    if(error.code === error.POSITION_UNAVAILABLE) errReason = "Location Unavailable";
-                    if(error.code === error.TIMEOUT) errReason = "Location Request Timeout";
-
-                    const locationData = {
-                        status: errReason,
-                        lat: null,
-                        lng: null
-                    };
-                    finalizeSubmission(name, role, venue, date, time, locationData);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
         }
 
-        function finalizeSubmission(name, role, venue, date, time, locationData) {
-            const submitBtn = document.getElementById("submitBtn");
-            const submissionTime = new Date().toLocaleString();
+        // ================= AUTHENTICATION & LOGIN =================
+        function loginEmployee(e) {
+            e.preventDefault();
+            const id = document.getElementById('empId').value;
+            const name = document.getElementById('empFullName').value;
+            startUserSession({ id, name, type: 'Employee', subInfo: `ID: ${id}` });
+        }
 
-            const entry = {
-                id: Date.now(),
-                name,
-                role,
-                venue,
-                eventDate: date,
-                eventTime: time,
-                submittedAt: submissionTime,
-                location: locationData
+        function loginDriver(e) {
+            e.preventDefault();
+            const name = document.getElementById('driverName').value;
+            const cabNo = document.getElementById('cabNumber').value;
+            startUserSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` });
+        }
+
+        function loginGuest(e) {
+            e.preventDefault();
+            const name = document.getElementById('guestName').value;
+            const company = document.getElementById('guestCompany').value;
+            const phone = document.getElementById('guestPhone').value;
+            startUserSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest / Contractor', subInfo: `${company} (${phone})` });
+        }
+
+        function startUserSession(userData) {
+            const punchInTime = new Date().toLocaleString();
+            currentUser = {
+                ...userData,
+                punchIn: punchInTime,
+                punchOut: 'Active (On Duty)',
+                venue: 'Not Specified',
+                role: userData.type === 'Cab Driver' ? 'Fleet / Cab Driver' : 'Pending Assignment',
+                eventDate: new Date().toISOString().slice(0, 10),
+                eventTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                lat: null,
+                lng: null,
+                lastSeen: punchInTime,
+                isActive: true
             };
 
-            saveSubmission(entry);
+            // Save in storage
+            saveOrUpdateSession(currentUser);
 
-            // Reset Form and Button
-            document.getElementById("checkinForm").reset();
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>Submit Details</span>`;
+            // Start Real-time continuous Geolocation tracking
+            startLiveLocationTracking();
 
-            // Show Confirmation to Employee (without exposing internal coordinates)
-            const receiptDiv = document.getElementById("employeeReceipt");
-            const detailsDiv = document.getElementById("receiptDetails");
+            // Transition UI
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('userPortalSection').classList.remove('hidden');
+            document.getElementById('navUserBadge').classList.remove('hidden');
 
-            detailsDiv.innerHTML = `
-                <p><strong>Employee:</strong> ${entry.name} (${entry.role})</p>
-                <p><strong>Venue:</strong> ${entry.venue}</p>
-                <p><strong>Scheduled:</strong> ${entry.eventDate} at ${entry.eventTime}</p>
-                <p><strong>Verified Submission Time:</strong> ${entry.submittedAt}</p>
-                <p class="text-xs text-indigo-600 mt-2"><i class="fa-solid fa-check"></i> GPS Location verified and securely transmitted to the Admin.</p>
-            `;
-            receiptDiv.classList.remove("hidden");
-            receiptDiv.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('navUserName').innerText = currentUser.name;
+            document.getElementById('navUserRole').innerText = `${currentUser.type} • ${currentUser.subInfo}`;
+            document.getElementById('userWelcomeTitle').innerText = `Hello, ${currentUser.name}!`;
+            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${currentUser.punchIn} | Category: ${currentUser.type}`;
         }
 
-        // ================= ADMIN VIEW HANDLING =================
-        function toggleView() {
-            if (isAdminLoggedIn) {
-                // Log out
-                isAdminLoggedIn = false;
-                document.getElementById("adminSection").classList.add("hidden");
-                document.getElementById("employeeSection").classList.remove("hidden");
-                document.getElementById("navBtnText").innerText = "Admin Login";
-                document.getElementById("navBtn").classList.replace("bg-red-600", "bg-indigo-700");
-            } else {
-                // Open password modal
-                document.getElementById("adminPasswordInput").value = "";
-                document.getElementById("adminAuthError").classList.add("hidden");
-                document.getElementById("adminAuthModal").classList.remove("hidden");
-                document.getElementById("adminPasswordInput").focus();
+        // ================= CONTINUOUS GEOLOCATION (WATCH POSITION) =================
+        function startLiveLocationTracking() {
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        currentUser.lat = position.coords.latitude;
+                        currentUser.lng = position.coords.longitude;
+                        currentUser.lastSeen = new Date().toLocaleTimeString();
+                        saveOrUpdateSession(currentUser);
+                    },
+                    (error) => {
+                        console.warn("Location tracking permission denied or unavailable:", error.message);
+                    },
+                    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+                );
             }
         }
 
-        function closeAuthModal() {
-            document.getElementById("adminAuthModal").classList.add("hidden");
+        function handleLogout() {
+            if (confirm("Are you sure you want to punch out and end your shift?")) {
+                if (watchId) navigator.geolocation.clearWatch(watchId);
+                currentUser.punchOut = new Date().toLocaleString();
+                currentUser.isActive = false;
+                saveOrUpdateSession(currentUser);
+
+                currentUser = null;
+                document.getElementById('userPortalSection').classList.add('hidden');
+                document.getElementById('navUserBadge').classList.add('hidden');
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dutySuccessReceipt').classList.add('hidden');
+            }
         }
 
-        function verifyAdminPassword() {
-            const pass = document.getElementById("adminPasswordInput").value;
+        // ================= EVENT FORM SUBMISSION =================
+        function submitEventDetails(e) {
+            e.preventDefault();
+            currentUser.role = document.getElementById('assignedRole').value;
+            currentUser.venue = document.getElementById('dutyVenue').value;
+            currentUser.eventDate = document.getElementById('dutyDate').value;
+            currentUser.eventTime = document.getElementById('dutyTime').value;
+
+            saveOrUpdateSession(currentUser);
+            document.getElementById('dutySuccessReceipt').classList.remove('hidden');
+        }
+
+        // Storage helpers
+        function getSessions() {
+            return JSON.parse(localStorage.getItem('fleet_sync_sessions') || '[]');
+        }
+
+        function saveOrUpdateSession(user) {
+            let list = getSessions();
+            const idx = list.findIndex(item => item.id === user.id && item.punchIn === user.punchIn);
+            if (idx >= 0) {
+                list[idx] = user;
+            } else {
+                list.unshift(user);
+            }
+            localStorage.setItem('fleet_sync_sessions', JSON.stringify(list));
+        }
+
+        // ================= ADMIN DASHBOARD & MAP =================
+        function loginAdmin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('adminPassword').value;
             if (pass === ADMIN_PASSCODE) {
-                isAdminLoggedIn = true;
-                closeAuthModal();
-                showAdminPanel();
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('adminDashboardSection').classList.remove('hidden');
+                document.getElementById('adminError').classList.add('hidden');
+                initMap();
+                renderAdminViews();
             } else {
-                document.getElementById("adminAuthError").classList.remove("hidden");
+                document.getElementById('adminError').classList.remove('hidden');
             }
         }
 
-        function showAdminPanel() {
-            document.getElementById("employeeSection").classList.add("hidden");
-            document.getElementById("adminSection").classList.remove("hidden");
-            document.getElementById("navBtnText").innerText = "Exit Admin Panel";
-            document.getElementById("navBtn").classList.replace("bg-indigo-700", "bg-red-600");
-            renderAdminTable();
+        function logoutAdmin() {
+            document.getElementById('adminDashboardSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        function renderAdminTable() {
-            const submissions = getSubmissions();
-            const tableBody = document.getElementById("adminTableBody");
-            const noData = document.getElementById("noDataMessage");
+        function initMap() {
+            if (!leafletMap) {
+                // Default coordinates (e.g. New Delhi / Global Center)
+                leafletMap = L.map('adminLiveMap').setView([28.6139, 77.2090], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(leafletMap);
+            }
+        }
 
-            tableBody.innerHTML = "";
+        function renderAdminViews() {
+            const sessions = getSessions();
+            const tableBody = document.getElementById('adminAuditTableBody');
+            tableBody.innerHTML = '';
 
-            if (submissions.length === 0) {
-                noData.classList.remove("hidden");
+            let bounds = [];
+
+            // Clear old map markers
+            for (let id in mapMarkers) {
+                leafletMap.removeLayer(mapMarkers[id]);
+            }
+            mapMarkers = {};
+
+            if (sessions.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No records found.</td></tr>`;
                 return;
             }
-            noData.classList.add("hidden");
 
-            submissions.forEach(sub => {
-                const tr = document.createElement("tr");
-                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+            sessions.forEach((s) => {
+                // Map Marker Color By Role
+                let colorClass = "bg-indigo-100 text-indigo-800";
+                let markerIcon = "fa-user";
+                let pinColor = "#4f46e5"; // Indigo
 
-                // Location display markup
-                let locationBadge = "";
-                if (sub.location.status === "Success") {
-                    const mapsUrl = `https://www.google.com/maps?q=${sub.location.lat},${sub.location.lng}`;
-                    locationBadge = `
+                if (s.type === 'Cab Driver') {
+                    colorClass = "bg-amber-100 text-amber-800";
+                    markerIcon = "fa-taxi";
+                    pinColor = "#f59e0b"; // Amber
+                } else if (s.type === 'Guest / Contractor') {
+                    colorClass = "bg-emerald-100 text-emerald-800";
+                    markerIcon = "fa-id-badge";
+                    pinColor = "#10b981"; // Emerald
+                }
+
+                // Place Pin on Map if GPS Lat/Lng exists
+                if (s.lat && s.lng) {
+                    bounds.push([s.lat, s.lng]);
+                    const marker = L.circleMarker([s.lat, s.lng], {
+                        radius: 9,
+                        fillColor: pinColor,
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(leafletMap);
+
+                    marker.bindPopup(`
+                        <div class="text-xs">
+                            <strong style="color:${pinColor}">${s.name} (${s.type})</strong><br/>
+                            ${s.subInfo}<br/>
+                            <strong>Venue:</strong> ${s.venue}<br/>
+                            <strong>Last GPS Ping:</strong> ${s.lastSeen}
+                        </div>
+                    `);
+                    mapMarkers[s.id] = marker;
+                }
+
+                // Location Table markup
+                let locationMarkup = "";
+                if (s.lat && s.lng) {
+                    locationMarkup = `
                         <div>
-                            <span class="font-mono text-xs text-slate-800 font-semibold">${sub.location.lat.toFixed(5)}, ${sub.location.lng.toFixed(5)}</span>
-                            <span class="text-[11px] text-slate-500 block">Accuracy: &plusmn;${sub.location.accuracy}</span>
-                            <a href="${mapsUrl}" target="_blank" class="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 font-medium mt-1 underline">
-                                <i class="fa-solid fa-map-pin mr-1"></i> Open Google Maps
+                            <span class="font-mono font-bold text-slate-800">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span>
+                            <span class="text-[10px] text-slate-400 block">Ping: ${s.lastSeen}</span>
+                            <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> View on Maps
                             </a>
                         </div>
                     `;
                 } else {
-                    locationBadge = `<span class="inline-block px-2 py-1 text-xs rounded bg-amber-100 text-amber-800 font-semibold">${sub.location.status}</span>`;
+                    locationMarkup = `<span class="text-slate-400 italic">No GPS coordinates recorded</span>`;
                 }
 
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
                 tr.innerHTML = `
-                    <td class="p-4">
-                        <div class="font-semibold text-slate-900">${sub.name}</div>
-                        <div class="text-xs text-slate-500">${sub.role}</div>
+                    <td class="p-3">
+                        <div class="font-bold text-slate-900">${s.name}</div>
+                        <span class="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold ${colorClass}">
+                            <i class="fa-solid ${markerIcon} mr-1"></i>${s.type}
+                        </span>
+                        <div class="text-[11px] text-slate-400">${s.subInfo}</div>
                     </td>
-                    <td class="p-4">${sub.venue}</td>
-                    <td class="p-4 text-xs font-mono">${sub.eventDate}<br/><span class="text-slate-500">${sub.eventTime}</span></td>
-                    <td class="p-4 text-xs text-slate-600">${sub.submittedAt}</td>
-                    <td class="p-4 bg-indigo-50/50 border-l border-indigo-100">${locationBadge}</td>
+                    <td class="p-3">
+                        <div class="font-semibold text-slate-800">${s.venue}</div>
+                        <div class="text-slate-500">${s.role}</div>
+                        <div class="text-[11px] text-slate-400 font-mono">${s.eventDate} ${s.eventTime}</div>
+                    </td>
+                    <td class="p-3 font-mono text-emerald-600 font-semibold">${s.punchIn}</td>
+                    <td class="p-3 font-mono font-semibold ${s.punchOut.includes('Active') ? 'text-amber-600' : 'text-rose-600'}">${s.punchOut}</td>
+                    <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">${locationMarkup}</td>
                 `;
                 tableBody.appendChild(tr);
             });
+
+            // Auto-fit map bounds to markers
+            if (bounds.length > 0) {
+                leafletMap.fitBounds(bounds, { padding: [40, 40] });
+            }
         }
 
-        function clearAllData() {
-            if (confirm("Are you sure you want to delete all employee logs?")) {
-                localStorage.removeItem("employee_checkins");
-                renderAdminTable();
+        function clearAuditLogs() {
+            if (confirm("Clear all punch and audit history?")) {
+                localStorage.removeItem('fleet_sync_sessions');
+                renderAdminViews();
             }
         }
 
         function exportCSV() {
-            const data = getSubmissions();
-            if(data.length === 0) return alert("No data to export.");
+            const data = getSessions();
+            if (!data.length) return alert("No data to export");
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "ID,Name,Role,Venue,Event Date,Event Time,Submitted At,Location Status,Latitude,Longitude\n";
-
+            let csv = "ID,Name,Type,Details,Role,Venue,Date,Time,Punch In,Punch Out,Latitude,Longitude,Last Ping\n";
             data.forEach(d => {
-                csvContent += `"${d.id}","${d.name}","${d.role}","${d.venue}","${d.eventDate}","${d.eventTime}","${d.submittedAt}","${d.location.status}","${d.location.lat || ''}","${d.location.lng || ''}"\n`;
+                csv += `"${d.id}","${d.name}","${d.type}","${d.subInfo}","${d.role}","${d.venue}","${d.eventDate}","${d.eventTime}","${d.punchIn}","${d.punchOut}","${d.lat || ''}","${d.lng || ''}","${d.lastSeen}"\n`;
             });
 
-            const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Employee_Submissions_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
+            link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+            link.download = `Fleet_Attendance_Logs_${new Date().toISOString().slice(0,10)}.csv`;
             link.click();
-            document.body.removeChild(link);
         }
     </script>
 </body>
