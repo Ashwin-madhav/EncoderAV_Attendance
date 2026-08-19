@@ -41,7 +41,7 @@
                     <div id="navUserName" class="font-bold text-sm leading-tight"></div>
                     <div id="navUserRole" class="text-xs text-indigo-200"></div>
                 </div>
-                <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1.5">
+                <button id="navPunchOutBtn" onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition shadow flex items-center gap-1.5">
                     <i class="fa-solid fa-power-off"></i> Punch Out
                 </button>
             </div>
@@ -69,7 +69,6 @@
             <div class="p-6">
                 <!-- A. Employee Login -->
                 <form id="formEmployeeLogin" onsubmit="loginEmployee(event)" class="space-y-4">
-                    <!-- Error Alert Box -->
                     <div id="empErrorAlert" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2">
                         <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i>
                         <span id="empErrorMessage">Invalid Employee! ID or Name not registered.</span>
@@ -142,13 +141,13 @@
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-emerald-800 bg-opacity-40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Active (Active Session)
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Active
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
                 </div>
                 <div>
-                    <button onclick="handleLogout()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm shadow transition">
+                    <button id="portalPunchOutBtn" onclick="handleLogout()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm shadow transition">
                         <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Punch Out
                     </button>
                 </div>
@@ -189,7 +188,7 @@
                     </button>
                 </form>
                 <div id="dutySuccessReceipt" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Synced to Cloud! Admin can now view your location in real time.
+                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Synced to Cloud! Admin can view live tracking.
                 </div>
             </div>
         </section>
@@ -199,9 +198,16 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Live multi-device staff tracking across phones, tabs, and cabs.</p>
+                    <p class="text-xs text-slate-500">Live telemetry, punch logs, and final exit locations.</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-csv text-sm"></i> Export CSV
+                    </button>
+                    <button onclick="clearAuditHistory()" class="px-4 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Clear Logs
+                    </button>
                     <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
                         Logout Admin
                     </button>
@@ -217,7 +223,6 @@
                     <span class="text-xs text-slate-400">Only registered employees can punch in</span>
                 </div>
 
-                <!-- Add Employee Form -->
                 <form onsubmit="addRegisteredEmployee(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input type="text" id="newEmpId" required placeholder="New Employee ID (e.g. EMP-105)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
                     <input type="text" id="newEmpName" required placeholder="Employee Full Name (e.g. Ashwin)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -226,32 +231,37 @@
                     </button>
                 </form>
 
-                <!-- List of Registered Employees -->
-                <div id="registeredEmployeesList" class="flex flex-wrap gap-2 pt-2">
-                    <!-- Dynamic badges loaded here -->
-                </div>
+                <div id="registeredEmployeesList" class="flex flex-wrap gap-2 pt-2"></div>
             </div>
 
             <!-- LIVE MAP -->
             <div class="bg-white p-4 md:p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
                 <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
-                    <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Live Cloud Fleet Map
+                    <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Active Fleet & Staff Live Map
                 </h3>
                 <div id="adminLiveMap"></div>
             </div>
 
-            <!-- LIVE DATA TABLE (WITH DEDICATED PUNCH-IN & PUNCH-OUT COLUMNS) -->
+            <!-- LIVE DATA TABLE WITH DEDICATED DATE COLUMN -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                                <th class="p-3 bg-slate-200/60 text-slate-800">
+                                    <i class="fa-regular fa-calendar mr-1 text-slate-600"></i> Date
+                                </th>
                                 <th class="p-3">User Details</th>
                                 <th class="p-3">Role & Venue</th>
+                                <th class="p-3 bg-amber-50 text-amber-900 border-l border-amber-100 text-center">
+                                    <i class="fa-solid fa-stopwatch mr-1"></i> Duty Hours (Today)
+                                </th>
                                 <th class="p-3 bg-emerald-50 text-emerald-900 border-l border-emerald-100">Punch-In Time</th>
                                 <th class="p-3 bg-rose-50 text-rose-900 border-l border-rose-100">Punch-Out Time</th>
                                 <th class="p-3">Status</th>
-                                <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">Live GPS Location</th>
+                                <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">
+                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Current / Exit Location (Admin)
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="adminAuditTableBody" class="divide-y divide-slate-100"></tbody>
@@ -279,11 +289,24 @@
 
         let currentUserKey = null;
         let watchId = null;
+        let lastKnownLat = null;
+        let lastKnownLng = null;
         let leafletMap = null;
         let mapMarkers = {};
+        let cachedSessions = {};
+        let cachedDutyData = {};
         const ADMIN_PASSCODE = "admin123";
 
-        // Seed initial employees in Firebase if empty
+        function formatDuration(ms) {
+            if (isNaN(ms) || ms <= 0) return "0 mins";
+            const totalMinutes = Math.floor(ms / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (hours === 0) return `${minutes} min${minutes !== 1 ? 's' : ''}`;
+            if (minutes === 0) return `${hours} hr${hours !== 1 ? 's' : ''}`;
+            return `${hours} hr${hours !== 1 ? 's' : ''} ${minutes} min${minutes !== 1 ? 's' : ''}`;
+        }
+
         function initRoster() {
             db.ref('registered_employees').once('value', (snapshot) => {
                 if (!snapshot.exists()) {
@@ -297,24 +320,22 @@
         }
         initRoster();
 
-        // -------------------------------------------------------------
-        // AUTO-RESUME ACTIVE SESSION (Tab Close / Reload Protection)
-        // -------------------------------------------------------------
+        // Auto-Resume on Page Reload / Tab Reopen
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
             if (savedSessionKey) {
                 db.ref('sessions/' + savedSessionKey).once('value', (snapshot) => {
                     if (snapshot.exists()) {
                         const sessionData = snapshot.val();
-                        // Only resume if not already punched out
                         if (sessionData.isActive === true) {
                             currentUserKey = savedSessionKey;
+                            lastKnownLat = sessionData.lat;
+                            lastKnownLng = sessionData.lng;
                             renderUserPortal(sessionData);
                             startLiveLocationTracking();
                             return;
                         }
                     }
-                    // Clean up stale key if session is closed
                     localStorage.removeItem('eav_active_session_key');
                 });
             }
@@ -343,7 +364,7 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN & DUPLICATE PREVENTION =================
+        // ================= EMPLOYEE LOGIN =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -355,7 +376,6 @@
             loginBtn.disabled = true;
             loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...`;
 
-            // 1. Verify against Registered Roster
             db.ref('registered_employees/' + idInput).once('value', (snapshot) => {
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In`;
@@ -365,7 +385,6 @@
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
-                        // 2. DUPLICATE CHECK: Search if user ALREADY has an active ongoing session
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
@@ -380,13 +399,13 @@
                             }
 
                             if (activeKey) {
-                                // Resume existing session (NO DUPLICATE ENTRY CREATED)
                                 currentUserKey = activeKey;
+                                lastKnownLat = activeData.lat;
+                                lastKnownLng = activeData.lng;
                                 localStorage.setItem('eav_active_session_key', currentUserKey);
                                 renderUserPortal(activeData);
                                 startLiveLocationTracking();
                             } else {
-                                // Create Brand New Punch-In Session
                                 startSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` });
                             }
                         });
@@ -418,22 +437,26 @@
         }
 
         function startSession(userData) {
-            const punchInTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const now = Date.now();
+            const punchInTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const punchDate = new Date(now).toISOString().slice(0, 10);
             
             const newRef = db.ref('sessions').push();
             currentUserKey = newRef.key;
 
-            // Save key in localStorage so reloading/closing browser remembers the session
             localStorage.setItem('eav_active_session_key', currentUserKey);
 
             const sessionData = {
                 ...userData,
+                punchInDate: punchDate,
                 punchIn: punchInTime,
+                punchInTimeMs: now,
                 punchOut: '--',
+                punchOutTimeMs: null,
                 venue: 'Pending Venue Submission',
                 role: userData.type === 'Cab Driver' ? 'Cab Driver' : 'Pending Role',
-                eventDate: new Date().toISOString().slice(0, 10),
-                eventTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                eventDate: punchDate,
+                eventTime: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 lat: null,
                 lng: null,
                 lastSeen: punchInTime,
@@ -453,7 +476,7 @@
             document.getElementById('navUserName').innerText = data.name;
             document.getElementById('navUserRole').innerText = `${data.type} • ${data.subInfo}`;
             document.getElementById('userWelcomeTitle').innerText = `Hello, ${data.name}!`;
-            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchIn} | Session Active`;
+            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchIn} (${data.punchInDate || data.eventDate}) | Session Active`;
 
             if (data.venue && data.venue !== 'Pending Venue Submission') {
                 document.getElementById('dutyVenue').value = data.venue;
@@ -468,10 +491,12 @@
                 if (watchId) navigator.geolocation.clearWatch(watchId);
                 watchId = navigator.geolocation.watchPosition(
                     (pos) => {
+                        lastKnownLat = pos.coords.latitude;
+                        lastKnownLng = pos.coords.longitude;
                         if (currentUserKey) {
                             db.ref('sessions/' + currentUserKey).update({
-                                lat: pos.coords.latitude,
-                                lng: pos.coords.longitude,
+                                lat: lastKnownLat,
+                                lng: lastKnownLng,
                                 lastSeen: new Date().toLocaleTimeString()
                             });
                         }
@@ -482,33 +507,66 @@
             }
         }
 
-        // ================= PUNCH OUT & TERMINATE ACTIVE SESSION =================
+        // ================= PUNCH OUT WITH FINAL GPS CAPTURE =================
         function handleLogout() {
-            if (confirm("Are you sure you want to punch out and end your shift?")) {
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = null;
-                }
+            if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
-                const punchOutTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const navBtn = document.getElementById('navPunchOutBtn');
+            const portalBtn = document.getElementById('portalPunchOutBtn');
+            
+            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Exit GPS...`;
+            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Exit GPS...`;
 
-                if (currentUserKey) {
-                    db.ref('sessions/' + currentUserKey).update({
-                        punchOut: punchOutTimestamp,
-                        isActive: false,
-                        lastSeen: punchOutTimestamp
-                    });
-                }
-
-                // Remove persistent key so login is required on next visit
-                localStorage.removeItem('eav_active_session_key');
-                currentUserKey = null;
-
-                document.getElementById('userPortalSection').classList.add('hidden');
-                document.getElementById('navUserBadge').classList.add('hidden');
-                document.getElementById('loginSection').classList.remove('hidden');
-                document.getElementById('formEmployeeLogin').reset();
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
             }
+
+            const now = Date.now();
+            const punchOutTimestamp = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        finalizePunchOut(pos.coords.latitude, pos.coords.longitude, punchOutTimestamp, now);
+                    },
+                    (err) => {
+                        console.warn("Could not get final GPS on exit, using last known position:", err.message);
+                        finalizePunchOut(lastKnownLat, lastKnownLng, punchOutTimestamp, now);
+                    },
+                    { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                );
+            } else {
+                finalizePunchOut(lastKnownLat, lastKnownLng, punchOutTimestamp, now);
+            }
+        }
+
+        function finalizePunchOut(exitLat, exitLng, punchOutTimestamp, timestampMs) {
+            if (currentUserKey) {
+                db.ref('sessions/' + currentUserKey).update({
+                    lat: exitLat || lastKnownLat || null,
+                    lng: exitLng || lastKnownLng || null,
+                    punchOut: punchOutTimestamp,
+                    punchOutTimeMs: timestampMs,
+                    isActive: false,
+                    lastSeen: punchOutTimestamp
+                });
+            }
+
+            localStorage.removeItem('eav_active_session_key');
+            currentUserKey = null;
+            lastKnownLat = null;
+            lastKnownLng = null;
+
+            const navBtn = document.getElementById('navPunchOutBtn');
+            const portalBtn = document.getElementById('portalPunchOutBtn');
+            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-power-off"></i> Punch Out`;
+            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Punch Out`;
+
+            document.getElementById('userPortalSection').classList.add('hidden');
+            document.getElementById('navUserBadge').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('formEmployeeLogin').reset();
         }
 
         function submitEventDetails(e) {
@@ -524,7 +582,7 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD & ROSTER MANAGEMENT =================
+        // ================= ADMIN DASHBOARD =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -593,10 +651,11 @@
             }, 300);
         }
 
-        // ================= REAL-TIME TABLE AUDIT WITH DISTINCT PUNCH-IN & PUNCH-OUT =================
+        // ================= REAL-TIME TABLE AUDIT WITH DATE COLUMN =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
+                cachedSessions = data;
                 const tableBody = document.getElementById('adminAuditTableBody');
                 tableBody.innerHTML = '';
 
@@ -606,11 +665,43 @@
                 mapMarkers = {};
                 let bounds = [];
 
+                if (Object.keys(data).length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No attendance entries recorded yet.</td></tr>`;
+                    return;
+                }
+
+                const dailyTotalMsMap = {};
+                const shiftDurationMsMap = {};
+
+                Object.keys(data).forEach((key) => {
+                    const s = data[key];
+                    const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
+                    const userDateKey = `${s.id}_${dateKey}`;
+
+                    let shiftMs = 0;
+                    const startMs = s.punchInTimeMs || (s.eventDate && s.punchIn ? new Date(`${s.eventDate} ${s.punchIn}`).getTime() : 0);
+
+                    if (startMs) {
+                        if (s.isActive) {
+                            shiftMs = Math.max(0, Date.now() - startMs);
+                        } else if (s.punchOutTimeMs) {
+                            shiftMs = Math.max(0, s.punchOutTimeMs - startMs);
+                        } else if (s.punchOut && s.punchOut !== '--') {
+                            const endMs = new Date(`${s.eventDate} ${s.punchOut}`).getTime();
+                            if (endMs > startMs) shiftMs = endMs - startMs;
+                        }
+                    }
+
+                    shiftDurationMsMap[key] = shiftMs;
+                    dailyTotalMsMap[userDateKey] = (dailyTotalMsMap[userDateKey] || 0) + shiftMs;
+                });
+
+                cachedDutyData = { dailyTotalMsMap, shiftDurationMsMap };
+
                 Object.keys(data).reverse().forEach((key) => {
                     const s = data[key];
                     let pinColor = s.type === 'Cab Driver' ? '#f59e0b' : (s.type === 'Guest' ? '#10b981' : '#4f46e5');
 
-                    // Map Marker
                     if (s.lat && s.lng && s.isActive) {
                         bounds.push([s.lat, s.lng]);
                         const marker = L.circleMarker([s.lat, s.lng], {
@@ -625,7 +716,10 @@
                         mapMarkers[key] = marker;
                     }
 
-                    // Format Punch Out Column Text
+                    const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
+                    const totalDayWorkedMs = dailyTotalMsMap[`${s.id}_${dateKey}`] || 0;
+                    const thisShiftWorkedMs = shiftDurationMsMap[key] || 0;
+
                     let punchOutDisplay = "";
                     if (s.isActive) {
                         punchOutDisplay = `<span class="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> On Duty (Active)</span>`;
@@ -633,9 +727,44 @@
                         punchOutDisplay = `<span class="font-mono text-rose-600 font-semibold">${s.punchOut || '--'}</span>`;
                     }
 
+                    let locationMarkup = "";
+                    if (s.lat && s.lng) {
+                        if (s.isActive) {
+                            locationMarkup = `
+                                <div>
+                                    <div class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live Tracking
+                                    </div>
+                                    <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
+                                    <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> View Live Map
+                                    </a>
+                                </div>
+                            `;
+                        } else {
+                            locationMarkup = `
+                                <div>
+                                    <div class="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        <i class="fa-solid fa-location-pin-lock text-rose-500"></i> Punch-Out Location
+                                    </div>
+                                    <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
+                                    <div class="text-[10px] text-slate-400">Captured at: ${s.punchOut || s.lastSeen}</div>
+                                    <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
+                                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> View Exit Spot
+                                    </a>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        locationMarkup = `<span class="text-slate-400 italic">No GPS coordinates recorded</span>`;
+                    }
+
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50";
                     tr.innerHTML = `
+                        <td class="p-3 bg-slate-50/50 font-mono font-bold text-slate-700 text-xs">
+                            ${dateKey}
+                        </td>
                         <td class="p-3">
                             <div class="font-bold text-slate-900">${s.name}</div>
                             <div class="text-[10px] text-slate-400 font-semibold">${s.type} &bull; ${s.subInfo}</div>
@@ -643,6 +772,12 @@
                         <td class="p-3">
                             <div class="font-semibold text-slate-800">${s.venue}</div>
                             <div class="text-slate-500">${s.role}</div>
+                        </td>
+                        <td class="p-3 bg-amber-50/40 border-l border-amber-100 text-center">
+                            <span class="inline-flex items-center gap-1 font-bold text-amber-950 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full text-xs shadow-xs">
+                                <i class="fa-solid fa-stopwatch text-amber-700 text-[10px]"></i> Total: ${formatDuration(totalDayWorkedMs)}
+                            </span>
+                            <div class="text-[10px] text-slate-400 mt-0.5 font-medium">Shift: ${formatDuration(thisShiftWorkedMs)}</div>
                         </td>
                         <td class="p-3 bg-emerald-50/40 border-l border-emerald-100 font-mono text-emerald-700 font-bold">
                             ${s.punchIn}
@@ -654,7 +789,7 @@
                             ${s.isActive ? '<span class="text-emerald-600 font-bold">🟢 Active</span>' : '<span class="text-slate-400 font-medium">🔴 Closed</span>'}
                         </td>
                         <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">
-                            ${s.lat ? `<a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 underline font-semibold">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)} (Open Map)</a>` : '<span class="text-slate-400">Waiting for GPS...</span>'}
+                            ${locationMarkup}
                         </td>
                     `;
                     tableBody.appendChild(tr);
@@ -662,6 +797,102 @@
 
                 if (bounds.length > 0) leafletMap.fitBounds(bounds, { padding: [50, 50] });
             });
+        }
+
+        // ================= CSV EXPORT FUNCTION =================
+        function exportCSV() {
+            const keys = Object.keys(cachedSessions);
+            if (keys.length === 0) {
+                alert("No attendance data available to export.");
+                return;
+            }
+
+            const headers = [
+                "Date",
+                "Session ID",
+                "User Type",
+                "User / Employee ID",
+                "Full Name",
+                "Sub Details",
+                "This Shift Duration",
+                "Total Day Duty Hours",
+                "Assigned Role",
+                "Event Venue",
+                "Punch-In Time",
+                "Punch-Out Time",
+                "Status",
+                "Location Type",
+                "Latitude",
+                "Longitude",
+                "Google Maps Link",
+                "Timestamp of Coordinate Capture"
+            ];
+
+            const escapeCSV = (val) => {
+                if (val === null || val === undefined) return '""';
+                const str = String(val).replace(/"/g, '""');
+                return `"${str}"`;
+            };
+
+            const rows = [];
+            rows.push(headers.join(","));
+
+            const { dailyTotalMsMap = {}, shiftDurationMsMap = {} } = cachedDutyData;
+
+            keys.forEach((key) => {
+                const s = cachedSessions[key];
+                const mapsUrl = s.lat && s.lng ? `https://maps.google.com/?q=${s.lat},${s.lng}` : 'N/A';
+                const status = s.isActive ? 'Active' : 'Punched Out';
+                const locationType = s.isActive ? 'Live Stream Location' : 'Final Exit (Punch-Out) Location';
+
+                const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
+                const totalDayWorked = formatDuration(dailyTotalMsMap[`${s.id}_${dateKey}`] || 0);
+                const thisShiftWorked = formatDuration(shiftDurationMsMap[key] || 0);
+
+                const row = [
+                    escapeCSV(dateKey),
+                    escapeCSV(key),
+                    escapeCSV(s.type || ''),
+                    escapeCSV(s.id || ''),
+                    escapeCSV(s.name || ''),
+                    escapeCSV(s.subInfo || ''),
+                    escapeCSV(thisShiftWorked),
+                    escapeCSV(totalDayWorked),
+                    escapeCSV(s.role || ''),
+                    escapeCSV(s.venue || ''),
+                    escapeCSV(s.punchIn || ''),
+                    escapeCSV(s.punchOut || '--'),
+                    escapeCSV(status),
+                    escapeCSV(locationType),
+                    escapeCSV(s.lat || ''),
+                    escapeCSV(s.lng || ''),
+                    escapeCSV(mapsUrl),
+                    escapeCSV(s.isActive ? s.lastSeen : (s.punchOut || s.lastSeen))
+                ];
+                rows.push(row.join(","));
+            });
+
+            const csvContent = "\uFEFF" + rows.join("\r\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const downloadLink = document.createElement("a");
+            downloadLink.setAttribute("href", url);
+            downloadLink.setAttribute("download", `EAV_Duty_Report_${dateStr}.csv`);
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+        }
+
+        // Clear Audit History
+        function clearAuditHistory() {
+            if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
+                db.ref('sessions').remove(() => {
+                    alert("All attendance history has been cleared.");
+                });
+            }
         }
     </script>
 </body>
