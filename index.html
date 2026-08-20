@@ -87,8 +87,9 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
                         <input type="text" id="empFullName" required placeholder="e.g. Alex Morgan" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" id="empLoginBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow">
-                        <i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In
+                    <button type="submit" id="empLoginBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition shadow flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Employee Punch-In</span>
                     </button>
                 </form>
 
@@ -102,8 +103,9 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Vehicle / Cab Number</label>
                         <input type="text" id="cabNumber" required placeholder="e.g. KA-01-AB-1234" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition shadow">
-                        <i class="fa-solid fa-taxi mr-2"></i> Start Cab Shift & Track GPS
+                    <button type="submit" id="driverLoginBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition shadow flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-taxi"></i>
+                        <span>Start Cab Shift & Track GPS</span>
                     </button>
                 </form>
 
@@ -121,8 +123,9 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Phone</label>
                         <input type="tel" id="guestPhone" required placeholder="e.g. +1 555-0199" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition shadow">
-                        <i class="fa-solid fa-id-badge mr-2"></i> Guest Punch-In
+                    <button type="submit" id="guestLoginBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm transition shadow flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-id-badge"></i>
+                        <span>Guest Punch-In</span>
                     </button>
                 </form>
 
@@ -227,7 +230,7 @@
                         <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
                             <i class="fa-solid fa-users-gear text-indigo-600 mr-1.5"></i> Employee Roster & Credential Dispatch
                         </h3>
-                        <p class="text-xs text-slate-400">Register staff, edit their details anytime, and dispatch login credentials via WhatsApp.</p>
+                        <p class="text-xs text-slate-400">Register staff, edit details anytime, and dispatch login credentials via WhatsApp.</p>
                     </div>
                 </div>
 
@@ -370,7 +373,7 @@
         let cachedRoster = {};
         const ADMIN_PASSCODE = "admin123";
 
-        // Global Telegram Notification Dispatcher (Works on all mobile devices)
+        // Global Telegram Dispatcher with keepalive for reliable mobile delivery
         function triggerTelegramNotification(msg) {
             const token = TELEGRAM_BOT_TOKEN || localStorage.getItem("telegram_bot_token") || "";
             const chatId = TELEGRAM_CHAT_ID || localStorage.getItem("telegram_chat_id") || "";
@@ -382,8 +385,9 @@
 
             const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`;
 
-            fetch(url, { mode: 'no-cors' })
-                .then(() => console.log("Telegram alert sent successfully from mobile!"))
+            // Using keepalive: true ensures mobile browsers don't kill the request on tab changes
+            fetch(url, { method: 'GET', keepalive: true, mode: 'no-cors' })
+                .then(() => console.log("Telegram alert sent successfully!"))
                 .catch(err => console.error("Telegram alert error:", err));
         }
 
@@ -463,7 +467,7 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN =================
+        // ================= EMPLOYEE LOGIN WITH IMMEDIATE GPS & PUNCH-IN ALERT =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -473,17 +477,15 @@
             const loginBtn = document.getElementById('empLoginBtn');
 
             loginBtn.disabled = true;
-            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Verifying...`;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS & Punching In...`;
 
             db.ref('registered_employees/' + idInput).once('value', (snapshot) => {
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket mr-2"></i> Employee Punch-In`;
-
                 if (snapshot.exists()) {
                     const registeredData = snapshot.val();
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
+                        // Check if employee already has an ongoing active session
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
@@ -498,22 +500,30 @@
                             }
 
                             if (activeKey) {
+                                // Resume existing session
                                 currentUserKey = activeKey;
                                 lastKnownLat = activeData.lat;
                                 lastKnownLng = activeData.lng;
                                 localStorage.setItem('eav_active_session_key', currentUserKey);
                                 renderUserPortal(activeData);
                                 startLiveLocationTracking();
+                                loginBtn.disabled = false;
+                                loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                             } else {
-                                startSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` });
+                                // Capture initial GPS right now so Punch-In Alert has coordinates & fires reliably
+                                captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` }, loginBtn);
                             }
                         });
 
                     } else {
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                         errorAlert.classList.remove('hidden');
                         errorMsg.innerHTML = `<strong>Invalid Employee:</strong> Name does not match registered name for ID <code>${idInput}</code>.`;
                     }
                 } else {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                     errorAlert.classList.remove('hidden');
                     errorMsg.innerHTML = `<strong>Invalid Employee:</strong> ID <code>${idInput}</code> is not registered in our company database. Please contact Admin.`;
                 }
@@ -524,7 +534,10 @@
             e.preventDefault();
             const name = document.getElementById('driverName').value;
             const cabNo = document.getElementById('cabNumber').value;
-            startSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` });
+            const loginBtn = document.getElementById('driverLoginBtn');
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS...`;
+            captureLocationAndStartSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` }, loginBtn);
         }
 
         function loginGuest(e) {
@@ -532,10 +545,45 @@
             const name = document.getElementById('guestName').value;
             const company = document.getElementById('guestCompany').value;
             const phone = document.getElementById('guestPhone').value;
-            startSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` });
+            const loginBtn = document.getElementById('guestLoginBtn');
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS...`;
+            captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` }, loginBtn);
         }
 
-        function startSession(userData) {
+        // Fetch initial GPS position before creating punch-in record (Guarantees Punch-In Telegram notification fires)
+        function captureLocationAndStartSession(userData, btnElement) {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        lastKnownLat = pos.coords.latitude;
+                        lastKnownLng = pos.coords.longitude;
+                        createSessionAndNotify(userData, lastKnownLat, lastKnownLng);
+                        if (btnElement) {
+                            btnElement.disabled = false;
+                            btnElement.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Punch In</span>`;
+                        }
+                    },
+                    (err) => {
+                        console.warn("Could not get initial GPS, proceeding with punch in:", err.message);
+                        createSessionAndNotify(userData, null, null);
+                        if (btnElement) {
+                            btnElement.disabled = false;
+                            btnElement.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Punch In</span>`;
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                );
+            } else {
+                createSessionAndNotify(userData, null, null);
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Punch In</span>`;
+                }
+            }
+        }
+
+        function createSessionAndNotify(userData, initialLat, initialLng) {
             const now = Date.now();
             const punchInTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const punchDate = new Date(now).toISOString().slice(0, 10);
@@ -556,19 +604,21 @@
                 role: userData.type === 'Cab Driver' ? 'Cab Driver' : 'Pending Role',
                 eventDate: punchDate,
                 eventTime: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                lat: null,
-                lng: null,
+                lat: initialLat,
+                lng: initialLng,
                 lastSeen: punchInTime,
                 isActive: true
             };
 
             newRef.set(sessionData);
 
-            // Automated Telegram Alert for Punch In
-            triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n⚡ Status: Active on Duty`);
+            // Trigger Punch-In Telegram Alert with GPS Link
+            const mapsLink = (initialLat && initialLng) ? `https://maps.google.com/?q=${initialLat},${initialLng}` : 'GPS Updating...';
+            const punchInAlertMsg = `🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n🏷️ Type: ${sessionData.type}\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n🗺️ Punch-In GPS: ${mapsLink}\n⚡ Status: Active on Duty`;
+            triggerTelegramNotification(punchInAlertMsg);
 
-            // Setup Direct WhatsApp Link to Admin
-            updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", null, null);
+            // Update Direct WhatsApp Link
+            updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", initialLat, initialLng);
 
             renderUserPortal(sessionData);
             startLiveLocationTracking();
@@ -721,7 +771,6 @@
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        // Add Employee to Roster
         function addRegisteredEmployee(e) {
             e.preventDefault();
             const empId = document.getElementById('newEmpId').value.trim().toUpperCase();
@@ -733,7 +782,7 @@
                     document.getElementById('newEmpId').value = '';
                     document.getElementById('newEmpName').value = '';
                     document.getElementById('newEmpPhone').value = '';
-                    alert(`Employee ${empName} (${empId}) registered successfully! You can now send their credentials.`);
+                    alert(`Employee ${empName} (${empId}) registered successfully!`);
                 }
             });
         }
@@ -744,7 +793,6 @@
             }
         }
 
-        // Open Edit Modal
         function openEditEmployeeModal(empId) {
             const emp = cachedRoster[empId];
             if (!emp) return;
@@ -761,7 +809,6 @@
             document.getElementById('editEmployeeModal').classList.add('hidden');
         }
 
-        // Save Edited Employee Details
         function saveEditedEmployee(e) {
             e.preventDefault();
             const origId = document.getElementById('editEmpOriginalId').value;
@@ -811,7 +858,6 @@
             });
         }
 
-        // Render Roster with Edit Button & Search Filter
         function renderRosterCards(data) {
             const listDiv = document.getElementById('registeredEmployeesList');
             const badge = document.getElementById('rosterCountBadge');
@@ -1113,7 +1159,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // Clear Audit History
         function clearAuditHistory() {
             if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
                 db.ref('sessions').remove(() => {
