@@ -146,9 +146,13 @@
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
                 </div>
-                <div>
-                    <button id="portalPunchOutBtn" onclick="handleLogout()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-sm shadow transition">
-                        <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Punch Out
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <!-- Direct WhatsApp Share Button to Admin -->
+                    <a id="directWhatsappBtn" href="#" target="_blank" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Admin
+                    </a>
+                    <button id="portalPunchOutBtn" onclick="handleLogout()" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Punch Out
                     </button>
                 </div>
             </div>
@@ -198,7 +202,7 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Live telemetry, punch logs, and final exit locations.</p>
+                    <p class="text-xs text-slate-500">Live telemetry, punch logs, and notifications.</p>
                 </div>
                 <!-- Action Buttons -->
                 <div class="flex flex-wrap items-center gap-2">
@@ -210,6 +214,29 @@
                     </button>
                     <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
                         Logout Admin
+                    </button>
+                </div>
+            </div>
+
+            <!-- ADMIN FEATURE: AUTOMATED TELEGRAM BOT SETTINGS -->
+            <div class="bg-gradient-to-r from-sky-600 to-blue-700 text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-brands fa-telegram text-2xl text-sky-200"></i>
+                        <h3 class="text-sm font-bold uppercase tracking-wider">Automated Instant Phone Alerts (Telegram)</h3>
+                    </div>
+                    <p class="text-xs text-sky-100 mt-1">
+                        100% Free & Unlimited automatic background alerts to your phone.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="telegramBotToken" placeholder="Telegram Bot Token" class="px-3 py-1.5 rounded-lg text-xs text-slate-800 outline-none border focus:ring-2 focus:ring-sky-400" />
+                    <input type="text" id="telegramChatId" placeholder="Your Chat ID" class="px-3 py-1.5 rounded-lg text-xs text-slate-800 outline-none border focus:ring-2 focus:ring-sky-400 w-28" />
+                    <button onclick="saveTelegramConfig()" class="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow">
+                        Save
+                    </button>
+                    <button onclick="testTelegramAlert()" class="bg-white hover:bg-sky-50 text-sky-800 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow">
+                        <i class="fa-solid fa-paper-plane mr-1"></i> Test Alert
                     </button>
                 </div>
             </div>
@@ -287,6 +314,10 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        const ADMIN_WHATSAPP_PHONE = "919043891097";
+        let telegramBotToken = localStorage.getItem("telegram_bot_token") || "";
+        let telegramChatId = localStorage.getItem("telegram_chat_id") || "";
+
         let currentUserKey = null;
         let watchId = null;
         let lastKnownLat = null;
@@ -295,7 +326,23 @@
         let mapMarkers = {};
         let cachedSessions = {};
         let cachedDutyData = {};
-        const ADMIN_PASSCODE = "Ecsoc@AV2024";
+        const ADMIN_PASSCODE = "ecsoc@AV24";
+
+        // ================= INSTANT DISPATCH HELPERS =================
+        function triggerTelegramNotification(msg) {
+            if (!telegramBotToken || !telegramChatId) return;
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage?chat_id=${telegramChatId}&text=${encodeURIComponent(msg)}`;
+            fetch(url).catch(e => console.error("Telegram alert error:", e));
+        }
+
+        function updateDirectWhatsAppLink(name, type, time, date, venue, status, duration, lat, lng) {
+            const locLink = (lat && lng) ? `https://maps.google.com/?q=${lat},${lng}` : 'GPS Updating...';
+            const msg = `🔔 *EAV ATTENDANCE UPDATE*\n👤 *User:* ${name} (${type})\n⚡ *Event:* ${status}\n📅 *Date:* ${date}\n⏰ *Time:* ${time}\n📍 *Venue:* ${venue}\n⏱️ *Duration:* ${duration}\n🗺️ *Location:* ${locLink}`;
+            const btn = document.getElementById('directWhatsappBtn');
+            if (btn) {
+                btn.href = `https://wa.me/${ADMIN_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`;
+            }
+        }
 
         function formatDuration(ms) {
             if (isNaN(ms) || ms <= 0) return "0 mins";
@@ -465,6 +512,12 @@
 
             newRef.set(sessionData);
 
+            // Automated Telegram Alert
+            triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n⚡ Status: On Duty`);
+
+            // Setup Direct WhatsApp Link to Admin
+            updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", null, null);
+
             renderUserPortal(sessionData);
             startLiveLocationTracking();
         }
@@ -477,6 +530,8 @@
             document.getElementById('navUserRole').innerText = `${data.type} • ${data.subInfo}`;
             document.getElementById('userWelcomeTitle').innerText = `Hello, ${data.name}!`;
             document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchIn} (${data.punchInDate || data.eventDate}) | Session Active`;
+
+            updateDirectWhatsAppLink(data.name, data.type, data.punchIn, data.punchInDate || data.eventDate, data.venue, "ACTIVE ON DUTY", "In Progress", data.lat, data.lng);
 
             if (data.venue && data.venue !== 'Pending Venue Submission') {
                 document.getElementById('dutyVenue').value = data.venue;
@@ -543,13 +598,26 @@
 
         function finalizePunchOut(exitLat, exitLng, punchOutTimestamp, timestampMs) {
             if (currentUserKey) {
-                db.ref('sessions/' + currentUserKey).update({
-                    lat: exitLat || lastKnownLat || null,
-                    lng: exitLng || lastKnownLng || null,
-                    punchOut: punchOutTimestamp,
-                    punchOutTimeMs: timestampMs,
-                    isActive: false,
-                    lastSeen: punchOutTimestamp
+                db.ref('sessions/' + currentUserKey).once('value', (snapshot) => {
+                    const session = snapshot.val() || {};
+                    const finalLat = exitLat || lastKnownLat || null;
+                    const finalLng = exitLng || lastKnownLng || null;
+
+                    db.ref('sessions/' + currentUserKey).update({
+                        lat: finalLat,
+                        lng: finalLng,
+                        punchOut: punchOutTimestamp,
+                        punchOutTimeMs: timestampMs,
+                        isActive: false,
+                        lastSeen: punchOutTimestamp
+                    });
+
+                    const startMs = session.punchInTimeMs || timestampMs;
+                    const shiftDuration = formatDuration(timestampMs - startMs);
+                    const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
+
+                    // Automated Telegram Alert
+                    triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
                 });
             }
 
@@ -582,7 +650,7 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD =================
+        // ================= ADMIN DASHBOARD & TELEGRAM CONFIG =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -591,6 +659,10 @@
                 initMap();
                 listenToCloudData();
                 listenToRegisteredEmployees();
+                if (document.getElementById('telegramBotToken')) {
+                    document.getElementById('telegramBotToken').value = telegramBotToken;
+                    document.getElementById('telegramChatId').value = telegramChatId;
+                }
             } else {
                 document.getElementById('adminError').classList.remove('hidden');
             }
@@ -599,6 +671,23 @@
         function logoutAdmin() {
             document.getElementById('adminDashboardSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function saveTelegramConfig() {
+            telegramBotToken = document.getElementById('telegramBotToken').value.trim();
+            telegramChatId = document.getElementById('telegramChatId').value.trim();
+            localStorage.setItem("telegram_bot_token", telegramBotToken);
+            localStorage.setItem("telegram_chat_id", telegramChatId);
+            alert("Telegram Configuration Saved!");
+        }
+
+        function testTelegramAlert() {
+            if (!telegramBotToken || !telegramChatId) {
+                alert("Please enter both Bot Token and Chat ID and click Save first.");
+                return;
+            }
+            triggerTelegramNotification("✅ *EAV Attendance System:* Live Telegram phone alerts connected successfully!");
+            alert("Test alert sent to Telegram! Check your phone.");
         }
 
         function addRegisteredEmployee(e) {
