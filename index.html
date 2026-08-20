@@ -19,6 +19,10 @@
 
     <style>
         #adminLiveMap { height: 420px; z-index: 10; border-radius: 1rem; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col font-sans">
@@ -147,7 +151,6 @@
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <!-- Direct WhatsApp Share Button to Admin -->
                     <a id="directWhatsappBtn" href="#" target="_blank" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition">
                         <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Admin
                     </a>
@@ -202,9 +205,8 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Live telemetry, punch logs, and notifications.</p>
+                    <p class="text-xs text-slate-500">Live telemetry, employee roster dispatch, and automated Telegram triggers.</p>
                 </div>
-                <!-- Action Buttons -->
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
                         <i class="fa-solid fa-file-csv text-sm"></i> Export CSV
@@ -218,47 +220,83 @@
                 </div>
             </div>
 
-            <!-- ADMIN FEATURE: AUTOMATED TELEGRAM BOT SETTINGS -->
-            <div class="bg-gradient-to-r from-sky-600 to-blue-700 text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <i class="fa-brands fa-telegram text-2xl text-sky-200"></i>
-                        <h3 class="text-sm font-bold uppercase tracking-wider">Automated Instant Phone Alerts (Telegram)</h3>
-                    </div>
-                    <p class="text-xs text-sky-100 mt-1">
-                        100% Free & Unlimited automatic background alerts to your phone.
-                    </p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <input type="text" id="telegramBotToken" placeholder="Telegram Bot Token" class="px-3 py-1.5 rounded-lg text-xs text-slate-800 outline-none border focus:ring-2 focus:ring-sky-400" />
-                    <input type="text" id="telegramChatId" placeholder="Your Chat ID" class="px-3 py-1.5 rounded-lg text-xs text-slate-800 outline-none border focus:ring-2 focus:ring-sky-400 w-28" />
-                    <button onclick="saveTelegramConfig()" class="bg-slate-900 hover:bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow">
-                        Save
-                    </button>
-                    <button onclick="testTelegramAlert()" class="bg-white hover:bg-sky-50 text-sky-800 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow">
-                        <i class="fa-solid fa-paper-plane mr-1"></i> Test Alert
-                    </button>
-                </div>
-            </div>
-
-            <!-- ADMIN FEATURE: REGISTERED EMPLOYEE MANAGEMENT -->
+            <!-- ADMIN FEATURE: REGISTERED EMPLOYEE MANAGEMENT & CREDENTIAL DISPATCH -->
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
-                    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
-                        <i class="fa-solid fa-users-gear text-indigo-600 mr-1.5"></i> Manage Registered Employees
-                    </h3>
-                    <span class="text-xs text-slate-400">Only registered employees can punch in</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                            <i class="fa-solid fa-users-gear text-indigo-600 mr-1.5"></i> Employee Roster & Credential Dispatch
+                        </h3>
+                        <p class="text-xs text-slate-400">Register staff, edit their details anytime, and dispatch login credentials via WhatsApp.</p>
+                    </div>
                 </div>
 
-                <form onsubmit="addRegisteredEmployee(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <input type="text" id="newEmpId" required placeholder="New Employee ID (e.g. EMP-105)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
-                    <input type="text" id="newEmpName" required placeholder="Employee Full Name (e.g. Ashwin)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                <!-- Add Employee Form -->
+                <form onsubmit="addRegisteredEmployee(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <input type="text" id="newEmpId" required placeholder="Employee ID (e.g. EMP-105)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" id="newEmpName" required placeholder="Employee Name (e.g. Ashwin)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="tel" id="newEmpPhone" placeholder="WhatsApp Phone (e.g. 919876543210)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold py-2 transition shadow">
                         <i class="fa-solid fa-user-plus mr-1"></i> Register Employee
                     </button>
                 </form>
 
-                <div id="registeredEmployeesList" class="flex flex-wrap gap-2 pt-2"></div>
+                <!-- SCROLLABLE REGISTERED STAFF DIRECTORY WITH LIVE SEARCH BAR -->
+                <div class="border-t pt-3 space-y-2.5">
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                        <h4 class="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
+                            Registered Staff Directory 
+                            <span id="rosterCountBadge" class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold">0 Staff</span>
+                        </h4>
+                        <!-- Live Search Input -->
+                        <div class="relative w-full sm:w-64">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="rosterSearchInput" oninput="filterRosterList()" placeholder="Search Name or ID..." class="w-full pl-8 pr-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+                        </div>
+                    </div>
+
+                    <!-- FIXED HEIGHT SCROLLABLE CONTAINER (DOES NOT PUSH PAGE DOWN) -->
+                    <div class="max-h-64 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50/70 custom-scroll shadow-inner">
+                        <div id="registeredEmployeesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDIT EMPLOYEE MODAL -->
+            <div id="editEmployeeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-slate-200">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4">
+                        <h3 class="text-base font-bold text-slate-800">
+                            <i class="fa-solid fa-user-pen text-indigo-600 mr-1.5"></i> Edit Employee Details
+                        </h3>
+                        <button onclick="closeEditEmployeeModal()" class="text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                    <form onsubmit="saveEditedEmployee(event)" class="space-y-4">
+                        <input type="hidden" id="editEmpOriginalId" />
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Employee ID *</label>
+                            <input type="text" id="editEmpId" required class="w-full px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
+                            <input type="text" id="editEmpName" required class="w-full px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">WhatsApp Phone Number</label>
+                            <input type="tel" id="editEmpPhone" placeholder="e.g. 919876543210" class="w-full px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2 border-t">
+                            <button type="button" onclick="closeEditEmployeeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">
+                                Cancel
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- LIVE MAP -->
@@ -314,9 +352,10 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Global Telegram Bot configuration
+        const TELEGRAM_BOT_TOKEN = "8626206203:AAGCupIhfUb-0LTQ8cnvKtmJtkD6LGYH1dU";
+        const TELEGRAM_CHAT_ID = "8440705611";
         const ADMIN_WHATSAPP_PHONE = "919043891097";
-        let telegramBotToken = localStorage.getItem("telegram_bot_token") || "";
-        let telegramChatId = localStorage.getItem("telegram_chat_id") || "";
 
         let currentUserKey = null;
         let watchId = null;
@@ -326,13 +365,14 @@
         let mapMarkers = {};
         let cachedSessions = {};
         let cachedDutyData = {};
+        let cachedRoster = {};
         const ADMIN_PASSCODE = "ecsoc@AV24";
 
-        // ================= INSTANT DISPATCH HELPERS =================
         function triggerTelegramNotification(msg) {
-            if (!telegramBotToken || !telegramChatId) return;
-            const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage?chat_id=${telegramChatId}&text=${encodeURIComponent(msg)}`;
-            fetch(url).catch(e => console.error("Telegram alert error:", e));
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`;
+            fetch(url, { mode: 'no-cors' })
+                .then(() => console.log("Telegram alert dispatched to Admin (8440705611)!"))
+                .catch(err => console.error("Telegram alert error:", err));
         }
 
         function updateDirectWhatsAppLink(name, type, time, date, venue, status, duration, lat, lng) {
@@ -358,16 +398,15 @@
             db.ref('registered_employees').once('value', (snapshot) => {
                 if (!snapshot.exists()) {
                     db.ref('registered_employees').set({
-                        "EMP-101": { name: "Alex Morgan" },
-                        "EMP-102": { name: "Sarah Jenkins" },
-                        "EMP-103": { name: "Rahul Sharma" }
+                        "EMP-101": { name: "Alex Morgan", phone: "919043891097" },
+                        "EMP-102": { name: "Sarah Jenkins", phone: "" },
+                        "EMP-103": { name: "Rahul Sharma", phone: "" }
                     });
                 }
             });
         }
         initRoster();
 
-        // Auto-Resume on Page Reload / Tab Reopen
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
             if (savedSessionKey) {
@@ -388,7 +427,6 @@
             }
         });
 
-        // Tab Switching
         function switchLoginTab(tab) {
             const tabs = ['tabEmp', 'tabDriver', 'tabGuest', 'tabAdmin'];
             const forms = ['formEmployeeLogin', 'formDriverLogin', 'formGuestLogin', 'formAdminLogin'];
@@ -411,7 +449,6 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -512,10 +549,7 @@
 
             newRef.set(sessionData);
 
-            // Automated Telegram Alert
-            triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n⚡ Status: On Duty`);
-
-            // Setup Direct WhatsApp Link to Admin
+            triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n⚡ Status: Active on Duty`);
             updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", null, null);
 
             renderUserPortal(sessionData);
@@ -562,7 +596,6 @@
             }
         }
 
-        // ================= PUNCH OUT WITH FINAL GPS CAPTURE =================
         function handleLogout() {
             if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
@@ -616,8 +649,7 @@
                     const shiftDuration = formatDuration(timestampMs - startMs);
                     const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
 
-                    // Automated Telegram Alert
-                    triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
+                    triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
                 });
             }
 
@@ -650,7 +682,6 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD & TELEGRAM CONFIG =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -659,10 +690,6 @@
                 initMap();
                 listenToCloudData();
                 listenToRegisteredEmployees();
-                if (document.getElementById('telegramBotToken')) {
-                    document.getElementById('telegramBotToken').value = telegramBotToken;
-                    document.getElementById('telegramChatId').value = telegramChatId;
-                }
             } else {
                 document.getElementById('adminError').classList.remove('hidden');
             }
@@ -673,32 +700,18 @@
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        function saveTelegramConfig() {
-            telegramBotToken = document.getElementById('telegramBotToken').value.trim();
-            telegramChatId = document.getElementById('telegramChatId').value.trim();
-            localStorage.setItem("telegram_bot_token", telegramBotToken);
-            localStorage.setItem("telegram_chat_id", telegramChatId);
-            alert("Telegram Configuration Saved!");
-        }
-
-        function testTelegramAlert() {
-            if (!telegramBotToken || !telegramChatId) {
-                alert("Please enter both Bot Token and Chat ID and click Save first.");
-                return;
-            }
-            triggerTelegramNotification("✅ *EAV Attendance System:* Live Telegram phone alerts connected successfully!");
-            alert("Test alert sent to Telegram! Check your phone.");
-        }
-
+        // ================= EMPLOYEE ROSTER & EDIT MODAL HANDLERS =================
         function addRegisteredEmployee(e) {
             e.preventDefault();
             const empId = document.getElementById('newEmpId').value.trim().toUpperCase();
             const empName = document.getElementById('newEmpName').value.trim();
+            const empPhone = document.getElementById('newEmpPhone').value.trim();
 
-            db.ref('registered_employees/' + empId).set({ name: empName }, (err) => {
+            db.ref('registered_employees/' + empId).set({ name: empName, phone: empPhone }, (err) => {
                 if (!err) {
                     document.getElementById('newEmpId').value = '';
                     document.getElementById('newEmpName').value = '';
+                    document.getElementById('newEmpPhone').value = '';
                     alert(`Employee ${empName} (${empId}) registered successfully!`);
                 }
             });
@@ -710,24 +723,131 @@
             }
         }
 
+        // Open Edit Modal
+        function openEditEmployeeModal(empId) {
+            const emp = cachedRoster[empId];
+            if (!emp) return;
+
+            document.getElementById('editEmpOriginalId').value = empId;
+            document.getElementById('editEmpId').value = empId;
+            document.getElementById('editEmpName').value = emp.name;
+            document.getElementById('editEmpPhone').value = emp.phone || '';
+
+            document.getElementById('editEmployeeModal').classList.remove('hidden');
+        }
+
+        function closeEditEmployeeModal() {
+            document.getElementById('editEmployeeModal').classList.add('hidden');
+        }
+
+        // Save Edited Employee Details
+        function saveEditedEmployee(e) {
+            e.preventDefault();
+            const origId = document.getElementById('editEmpOriginalId').value;
+            const newId = document.getElementById('editEmpId').value.trim().toUpperCase();
+            const newName = document.getElementById('editEmpName').value.trim();
+            const newPhone = document.getElementById('editEmpPhone').value.trim();
+
+            // If ID was changed, remove old key and set new key
+            if (newId !== origId) {
+                db.ref('registered_employees/' + origId).remove();
+            }
+
+            db.ref('registered_employees/' + newId).set({ name: newName, phone: newPhone }, (err) => {
+                if (!err) {
+                    closeEditEmployeeModal();
+                    alert(`Employee ${newName} (${newId}) updated successfully!`);
+                }
+            });
+        }
+
+        function sendCredentialsWhatsApp(empId, empName, phone) {
+            const portalUrl = window.location.href.split('#')[0];
+            const msg = `👋 *Hello ${empName},*\nHere are your login credentials for the *EAV Attendance & Fleet Portal*:\n\n🆔 *Employee ID:* ${empId}\n👤 *Name:* ${empName}\n🔗 *Portal Link:* ${portalUrl}\n\n_Please open the link, enter your ID & Name, allow location access, and punch in._`;
+            
+            const targetPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+            const waUrl = targetPhone 
+                ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`
+                : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+            window.open(waUrl, '_blank');
+        }
+
+        function copyCredentials(empId, empName) {
+            const portalUrl = window.location.href.split('#')[0];
+            const msg = `Hello ${empName},\nYour EAV Portal Credentials:\nEmployee ID: ${empId}\nName: ${empName}\nPortal URL: ${portalUrl}`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(msg).then(() => alert(`Credentials for ${empName} copied to clipboard!`));
+            } else {
+                prompt("Copy credentials:", msg);
+            }
+        }
+
         function listenToRegisteredEmployees() {
             db.ref('registered_employees').on('value', (snapshot) => {
-                const listDiv = document.getElementById('registeredEmployeesList');
-                listDiv.innerHTML = '';
-                const data = snapshot.val() || {};
-
-                Object.keys(data).forEach((id) => {
-                    const badge = document.createElement('div');
-                    badge.className = "flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-900 px-3 py-1.5 rounded-lg text-xs font-semibold";
-                    badge.innerHTML = `
-                        <span><strong>${id}</strong>: ${data[id].name}</span>
-                        <button onclick="removeRegisteredEmployee('${id}')" class="text-rose-500 hover:text-rose-700 ml-1" title="Delete">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    `;
-                    listDiv.appendChild(badge);
-                });
+                cachedRoster = snapshot.val() || {};
+                renderRosterCards(cachedRoster);
             });
+        }
+
+        // Render Roster with Edit Button
+        function renderRosterCards(data) {
+            const listDiv = document.getElementById('registeredEmployeesList');
+            const badge = document.getElementById('rosterCountBadge');
+            const query = (document.getElementById('rosterSearchInput')?.value || '').toLowerCase().trim();
+
+            listDiv.innerHTML = '';
+            const totalCount = Object.keys(data).length;
+            if (badge) badge.innerText = `${totalCount} Staff`;
+
+            const filteredKeys = Object.keys(data).filter(id => {
+                const emp = data[id];
+                return id.toLowerCase().includes(query) || (emp.name && emp.name.toLowerCase().includes(query));
+            });
+
+            if (filteredKeys.length === 0) {
+                listDiv.innerHTML = `<div class="text-xs text-slate-400 p-4 col-span-full text-center">No staff found matching your search.</div>`;
+                return;
+            }
+
+            filteredKeys.forEach((id) => {
+                const emp = data[id];
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between shadow-sm hover:border-indigo-200 transition";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="font-mono text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">${id}</span>
+                            <h5 class="font-bold text-slate-900 text-xs mt-1 truncate max-w-[140px]">${emp.name}</h5>
+                            <div class="text-[10px] text-slate-400">${emp.phone ? `<i class="fa-solid fa-phone text-[8px] mr-1"></i>${emp.phone}` : 'No phone saved'}</div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <!-- EDIT BUTTON -->
+                            <button onclick="openEditEmployeeModal('${id}')" class="text-indigo-500 hover:text-indigo-700 p-1" title="Edit Employee">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <!-- DELETE BUTTON -->
+                            <button onclick="removeRegisteredEmployee('${id}')" class="text-rose-400 hover:text-rose-600 p-1" title="Delete Employee">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5 pt-2 border-t border-slate-100">
+                        <button onclick="sendCredentialsWhatsApp('${id}', '${emp.name}', '${emp.phone || ''}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold py-1.5 flex items-center justify-center gap-1 shadow-xs transition">
+                            <i class="fa-brands fa-whatsapp text-xs"></i> Send Info
+                        </button>
+                        <button onclick="copyCredentials('${id}', '${emp.name}')" class="px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold py-1.5 transition" title="Copy text">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                `;
+                listDiv.appendChild(card);
+            });
+        }
+
+        function filterRosterList() {
+            renderRosterCards(cachedRoster);
         }
 
         function initMap() {
@@ -740,7 +860,6 @@
             }, 300);
         }
 
-        // ================= REAL-TIME TABLE AUDIT WITH DATE COLUMN =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -888,7 +1007,6 @@
             });
         }
 
-        // ================= CSV EXPORT FUNCTION =================
         function exportCSV() {
             const keys = Object.keys(cachedSessions);
             if (keys.length === 0) {
@@ -975,7 +1093,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // Clear Audit History
         function clearAuditHistory() {
             if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
                 db.ref('sessions').remove(() => {
