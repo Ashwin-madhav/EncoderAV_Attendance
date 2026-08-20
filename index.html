@@ -130,7 +130,7 @@
                 <form id="formAdminLogin" onsubmit="loginAdmin(event)" class="space-y-4 hidden">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Admin Passcode</label>
-                        <input type="password" id="adminPassword" required placeholder="Enter Password" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                        <input type="password" id="adminPassword" required placeholder="Default: admin123" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
                     <p id="adminError" class="text-xs text-rose-500 hidden font-semibold">Invalid admin passcode!</p>
                     <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-lg font-semibold text-sm transition shadow">
@@ -352,7 +352,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Global Telegram Bot configuration
+        // -------------------------------------------------------------
+        // YOUR TELEGRAM BOT CONFIGURATION (Global for all devices)
+        // -------------------------------------------------------------
         const TELEGRAM_BOT_TOKEN = "8626206203:AAGCupIhfUb-0LTQ8cnvKtmJtkD6LGYH1dU";
         const TELEGRAM_CHAT_ID = "8440705611";
         const ADMIN_WHATSAPP_PHONE = "919043891097";
@@ -366,12 +368,22 @@
         let cachedSessions = {};
         let cachedDutyData = {};
         let cachedRoster = {};
-        const ADMIN_PASSCODE = "ecsoc@AV24";
+        const ADMIN_PASSCODE = "admin123";
 
+        // Global Telegram Notification Dispatcher (Works on all mobile devices)
         function triggerTelegramNotification(msg) {
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(msg)}`;
+            const token = TELEGRAM_BOT_TOKEN || localStorage.getItem("telegram_bot_token") || "";
+            const chatId = TELEGRAM_CHAT_ID || localStorage.getItem("telegram_chat_id") || "";
+
+            if (!token || !chatId) {
+                console.warn("Telegram Token or Chat ID not configured.");
+                return;
+            }
+
+            const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`;
+
             fetch(url, { mode: 'no-cors' })
-                .then(() => console.log("Telegram alert dispatched to Admin (8440705611)!"))
+                .then(() => console.log("Telegram alert sent successfully from mobile!"))
                 .catch(err => console.error("Telegram alert error:", err));
         }
 
@@ -407,6 +419,7 @@
         }
         initRoster();
 
+        // Auto-Resume on Page Reload / Tab Reopen
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
             if (savedSessionKey) {
@@ -427,6 +440,7 @@
             }
         });
 
+        // Tab Switching
         function switchLoginTab(tab) {
             const tabs = ['tabEmp', 'tabDriver', 'tabGuest', 'tabAdmin'];
             const forms = ['formEmployeeLogin', 'formDriverLogin', 'formGuestLogin', 'formAdminLogin'];
@@ -449,6 +463,7 @@
             }
         }
 
+        // ================= EMPLOYEE LOGIN =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -549,7 +564,10 @@
 
             newRef.set(sessionData);
 
+            // Automated Telegram Alert for Punch In
             triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n⚡ Status: Active on Duty`);
+
+            // Setup Direct WhatsApp Link to Admin
             updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", null, null);
 
             renderUserPortal(sessionData);
@@ -596,6 +614,7 @@
             }
         }
 
+        // ================= PUNCH OUT WITH FINAL GPS CAPTURE =================
         function handleLogout() {
             if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
@@ -649,6 +668,7 @@
                     const shiftDuration = formatDuration(timestampMs - startMs);
                     const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
 
+                    // Automated Telegram Alert for Punch Out
                     triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
                 });
             }
@@ -682,6 +702,7 @@
             }
         }
 
+        // ================= ADMIN DASHBOARD & ROSTER MANAGEMENT =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -700,7 +721,7 @@
             document.getElementById('loginSection').classList.remove('hidden');
         }
 
-        // ================= EMPLOYEE ROSTER & EDIT MODAL HANDLERS =================
+        // Add Employee to Roster
         function addRegisteredEmployee(e) {
             e.preventDefault();
             const empId = document.getElementById('newEmpId').value.trim().toUpperCase();
@@ -712,7 +733,7 @@
                     document.getElementById('newEmpId').value = '';
                     document.getElementById('newEmpName').value = '';
                     document.getElementById('newEmpPhone').value = '';
-                    alert(`Employee ${empName} (${empId}) registered successfully!`);
+                    alert(`Employee ${empName} (${empId}) registered successfully! You can now send their credentials.`);
                 }
             });
         }
@@ -748,7 +769,6 @@
             const newName = document.getElementById('editEmpName').value.trim();
             const newPhone = document.getElementById('editEmpPhone').value.trim();
 
-            // If ID was changed, remove old key and set new key
             if (newId !== origId) {
                 db.ref('registered_employees/' + origId).remove();
             }
@@ -791,7 +811,7 @@
             });
         }
 
-        // Render Roster with Edit Button
+        // Render Roster with Edit Button & Search Filter
         function renderRosterCards(data) {
             const listDiv = document.getElementById('registeredEmployeesList');
             const badge = document.getElementById('rosterCountBadge');
@@ -823,11 +843,9 @@
                             <div class="text-[10px] text-slate-400">${emp.phone ? `<i class="fa-solid fa-phone text-[8px] mr-1"></i>${emp.phone}` : 'No phone saved'}</div>
                         </div>
                         <div class="flex items-center gap-1">
-                            <!-- EDIT BUTTON -->
                             <button onclick="openEditEmployeeModal('${id}')" class="text-indigo-500 hover:text-indigo-700 p-1" title="Edit Employee">
                                 <i class="fa-solid fa-pen-to-square text-xs"></i>
                             </button>
-                            <!-- DELETE BUTTON -->
                             <button onclick="removeRegisteredEmployee('${id}')" class="text-rose-400 hover:text-rose-600 p-1" title="Delete Employee">
                                 <i class="fa-solid fa-trash-can text-xs"></i>
                             </button>
@@ -860,6 +878,7 @@
             }, 300);
         }
 
+        // ================= REAL-TIME TABLE AUDIT WITH DATE COLUMN =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -1007,6 +1026,7 @@
             });
         }
 
+        // ================= CSV EXPORT FUNCTION =================
         function exportCSV() {
             const keys = Object.keys(cachedSessions);
             if (keys.length === 0) {
@@ -1093,6 +1113,7 @@
             URL.revokeObjectURL(url);
         }
 
+        // Clear Audit History
         function clearAuditHistory() {
             if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
                 db.ref('sessions').remove(() => {
