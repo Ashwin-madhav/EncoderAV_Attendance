@@ -18,11 +18,41 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        #adminLiveMap { height: 420px; z-index: 10; border-radius: 1rem; }
+        #adminLiveMap { height: 480px; z-index: 10; border-radius: 1rem; }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .live-marker-pulse {
+            position: relative;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+        }
+        .live-marker-pulse::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            border: 2px solid inherit;
+            animation: pulseWave 1.5s infinite ease-out;
+            opacity: 0.8;
+        }
+        @keyframes pulseWave {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col font-sans">
@@ -32,11 +62,11 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <div class="bg-white text-indigo-700 p-2 rounded-xl shadow-md">
-                    <i class="fa-solid fa-cloud-bolt text-xl"></i>
+                    <i class="fa-solid fa-satellite-dish text-xl animate-pulse text-indigo-600"></i>
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none">EAV Attendance Cloud</h1>
-                    <span class="text-xs text-indigo-200">Live Multi-Device Staff & Fleet Tracking</span>
+                    <span class="text-xs text-indigo-200">Street-Level Live Telemetry & Fleet Tracking</span>
                 </div>
             </div>
 
@@ -105,7 +135,7 @@
                     </div>
                     <button type="submit" id="driverLoginBtn" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition shadow flex items-center justify-center gap-2">
                         <i class="fa-solid fa-taxi"></i>
-                        <span>Start Cab Shift & Track GPS</span>
+                        <span>Start Cab Shift & Stream Live GPS</span>
                     </button>
                 </form>
 
@@ -145,13 +175,23 @@
 
         <!-- ================= 2. EMPLOYEE / GUEST PORTAL ================= -->
         <section id="userPortalSection" class="hidden max-w-3xl mx-auto space-y-6">
+            <!-- Active Status Banner with Live Telemetry Monitor -->
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
-                    <div class="inline-flex items-center gap-2 bg-emerald-800 bg-opacity-40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Cloud GPS Active
+                    <div class="inline-flex items-center gap-2 bg-emerald-900/60 border border-emerald-400/40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Background Telemetry Active
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
+                    
+                    <!-- Live Mobile Telemetry Real-Time Status -->
+                    <div id="empLiveGpsMonitor" class="mt-2.5 bg-emerald-950/50 border border-emerald-300/40 px-3 py-2 rounded-lg text-xs font-mono text-emerald-100 flex items-center gap-2">
+                        <i class="fa-solid fa-satellite-dish animate-spin text-emerald-300"></i> Connecting Live GPS Stream...
+                    </div>
+                    
+                    <p class="text-[10px] text-emerald-200 mt-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-volume-high text-emerald-300"></i> Background audio keepalive is active to keep GPS streaming when minimized.
+                    </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
                     <a id="directWhatsappBtn" href="#" target="_blank" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition">
@@ -198,7 +238,7 @@
                     </button>
                 </form>
                 <div id="dutySuccessReceipt" class="hidden mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Synced to Cloud! Admin can view live tracking.
+                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Synced to Cloud! Admin is actively tracking your movement live.
                 </div>
             </div>
         </section>
@@ -208,7 +248,7 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Live telemetry, employee roster dispatch, and automated Telegram triggers.</p>
+                    <p class="text-xs text-slate-500">Street-level live tracking, real-time route trails, and fleet monitoring.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
@@ -223,7 +263,7 @@
                 </div>
             </div>
 
-            <!-- ADMIN FEATURE: REGISTERED EMPLOYEE MANAGEMENT & CREDENTIAL DISPATCH -->
+            <!-- ADMIN FEATURE: REGISTERED EMPLOYEE MANAGEMENT -->
             <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
                 <div class="flex justify-between items-center border-b pb-3">
                     <div>
@@ -234,7 +274,6 @@
                     </div>
                 </div>
 
-                <!-- Add Employee Form -->
                 <form onsubmit="addRegisteredEmployee(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <input type="text" id="newEmpId" required placeholder="Employee ID (e.g. EMP-105)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
                     <input type="text" id="newEmpName" required placeholder="Employee Name (e.g. Ashwin)" class="px-3 py-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -244,21 +283,18 @@
                     </button>
                 </form>
 
-                <!-- SCROLLABLE REGISTERED STAFF DIRECTORY WITH LIVE SEARCH BAR -->
                 <div class="border-t pt-3 space-y-2.5">
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                         <h4 class="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
                             Registered Staff Directory 
                             <span id="rosterCountBadge" class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold">0 Staff</span>
                         </h4>
-                        <!-- Live Search Input -->
                         <div class="relative w-full sm:w-64">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                             <input type="text" id="rosterSearchInput" oninput="filterRosterList()" placeholder="Search Name or ID..." class="w-full pl-8 pr-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
                         </div>
                     </div>
 
-                    <!-- FIXED HEIGHT SCROLLABLE CONTAINER (DOES NOT PUSH PAGE DOWN) -->
                     <div class="max-h-64 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50/70 custom-scroll shadow-inner">
                         <div id="registeredEmployeesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5"></div>
                     </div>
@@ -302,11 +338,21 @@
                 </div>
             </div>
 
-            <!-- LIVE MAP -->
+            <!-- LIVE MAP WITH STREET-LEVEL AUTO-TRACKING -->
             <div class="bg-white p-4 md:p-6 rounded-2xl shadow-md border border-slate-200 space-y-4">
-                <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
-                    <i class="fa-solid fa-earth-americas text-indigo-600 mr-1.5"></i> Active Fleet & Staff Live Map
-                </h3>
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-route text-indigo-600"></i> Street-Level Live Route & Radar
+                        </h3>
+                        <p class="text-[11px] text-slate-500">Live moving pins glide across streets and draw blue breadcrumb trails in real time.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="toggleFollowBtn" onclick="toggleAutoFollow()" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-crosshairs text-xs"></i> <span id="followBtnText">Street Auto-Focus: ON</span>
+                        </button>
+                    </div>
+                </div>
                 <div id="adminLiveMap"></div>
             </div>
 
@@ -328,7 +374,7 @@
                                 <th class="p-3 bg-rose-50 text-rose-900 border-l border-rose-100">Punch-Out Time</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">
-                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Current / Exit Location (Admin)
+                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Live Stream / Action (Admin)
                                 </th>
                             </tr>
                         </thead>
@@ -355,25 +401,68 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // -------------------------------------------------------------
-        // YOUR TELEGRAM BOT CONFIGURATION (Global for all devices)
-        // -------------------------------------------------------------
+        // Global Telegram Bot configuration
         const TELEGRAM_BOT_TOKEN = "8626206203:AAGCupIhfUb-0LTQ8cnvKtmJtkD6LGYH1dU";
         const TELEGRAM_CHAT_ID = "8440705611";
         const ADMIN_WHATSAPP_PHONE = "919043891097";
 
         let currentUserKey = null;
-        let watchId = null;
+        let isStreaming = false;
+        let wakeLock = null;
+        let backgroundAudio = null;
+        let pingCount = 0;
         let lastKnownLat = null;
         let lastKnownLng = null;
         let leafletMap = null;
         let mapMarkers = {};
+        let mapTrails = {};
         let cachedSessions = {};
         let cachedDutyData = {};
         let cachedRoster = {};
+        let autoFollowMap = true;
         const ADMIN_PASSCODE = "admin123";
 
-        // Global Telegram Dispatcher with keepalive for reliable mobile delivery
+        // ================= BACKGROUND AUDIO KEEPALIVE ENGINE =================
+        // Generates a 1-second silent WAV loop in memory to keep iOS Safari & Android Chrome active when minimized
+        function initBackgroundAudioKeeper() {
+            try {
+                if (!backgroundAudio) {
+                    const silentWavBase64 = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+                    backgroundAudio = new Audio(silentWavBase64);
+                    backgroundAudio.loop = true;
+                }
+                backgroundAudio.play().then(() => {
+                    console.log("Background Audio Keeper active: Mobile browser will stay awake when minimized.");
+                }).catch(e => console.warn("Audio play interaction required:", e.message));
+
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: 'EAV Live Fleet Telemetry Active',
+                        artist: 'Background GPS Tracking Active'
+                    });
+                }
+            } catch (err) {
+                console.warn("Audio keeper error:", err);
+            }
+        }
+
+        function stopBackgroundAudioKeeper() {
+            if (backgroundAudio) {
+                backgroundAudio.pause();
+                backgroundAudio = null;
+            }
+        }
+
+        async function requestScreenWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.warn('Wake Lock error:', err.message);
+            }
+        }
+
         function triggerTelegramNotification(msg) {
             const token = TELEGRAM_BOT_TOKEN || localStorage.getItem("telegram_bot_token") || "";
             const chatId = TELEGRAM_CHAT_ID || localStorage.getItem("telegram_chat_id") || "";
@@ -385,7 +474,6 @@
 
             const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`;
 
-            // Using keepalive: true ensures mobile browsers don't kill the request on tab changes
             fetch(url, { method: 'GET', keepalive: true, mode: 'no-cors' })
                 .then(() => console.log("Telegram alert sent successfully!"))
                 .catch(err => console.error("Telegram alert error:", err));
@@ -467,7 +555,7 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN WITH IMMEDIATE GPS & PUNCH-IN ALERT =================
+        // ================= EMPLOYEE LOGIN =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -485,7 +573,6 @@
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
-                        // Check if employee already has an ongoing active session
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
@@ -500,7 +587,6 @@
                             }
 
                             if (activeKey) {
-                                // Resume existing session
                                 currentUserKey = activeKey;
                                 lastKnownLat = activeData.lat;
                                 lastKnownLng = activeData.lng;
@@ -510,7 +596,6 @@
                                 loginBtn.disabled = false;
                                 loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                             } else {
-                                // Capture initial GPS right now so Punch-In Alert has coordinates & fires reliably
                                 captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` }, loginBtn);
                             }
                         });
@@ -551,7 +636,6 @@
             captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` }, loginBtn);
         }
 
-        // Fetch initial GPS position before creating punch-in record (Guarantees Punch-In Telegram notification fires)
         function captureLocationAndStartSession(userData, btnElement) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -565,14 +649,14 @@
                         }
                     },
                     (err) => {
-                        console.warn("Could not get initial GPS, proceeding with punch in:", err.message);
+                        console.warn("Initial GPS prompt warning:", err.message);
                         createSessionAndNotify(userData, null, null);
                         if (btnElement) {
                             btnElement.disabled = false;
                             btnElement.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Punch In</span>`;
                         }
                     },
-                    { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
                 );
             } else {
                 createSessionAndNotify(userData, null, null);
@@ -606,18 +690,21 @@
                 eventTime: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 lat: initialLat,
                 lng: initialLng,
+                lastSeenMs: now,
                 lastSeen: punchInTime,
                 isActive: true
             };
 
             newRef.set(sessionData);
 
-            // Trigger Punch-In Telegram Alert with GPS Link
+            if (initialLat && initialLng) {
+                db.ref('live_trails/' + currentUserKey).push({ lat: initialLat, lng: initialLng, t: now });
+            }
+
             const mapsLink = (initialLat && initialLng) ? `https://maps.google.com/?q=${initialLat},${initialLng}` : 'GPS Updating...';
             const punchInAlertMsg = `🔔 *EAV ATTENDANCE ALERT - PUNCH IN*\n👤 User: ${sessionData.name} (${sessionData.subInfo})\n🏷️ Type: ${sessionData.type}\n📅 Date: ${punchDate}\n⏰ Time: ${punchInTime}\n🗺️ Punch-In GPS: ${mapsLink}\n⚡ Status: Active on Duty`;
             triggerTelegramNotification(punchInAlertMsg);
 
-            // Update Direct WhatsApp Link
             updateDirectWhatsAppLink(sessionData.name, sessionData.type, punchInTime, punchDate, sessionData.venue, "PUNCH IN (Active on Duty)", "Starting Shift", initialLat, initialLng);
 
             renderUserPortal(sessionData);
@@ -643,25 +730,63 @@
             }
         }
 
+        // ================= CONTINUOUS REAL-TIME GPS STREAMER WITH AUDIO KEEPALIVE =================
         function startLiveLocationTracking() {
-            if ("geolocation" in navigator) {
-                if (watchId) navigator.geolocation.clearWatch(watchId);
-                watchId = navigator.geolocation.watchPosition(
+            if (!("geolocation" in navigator)) return;
+            isStreaming = true;
+            pingCount = 0;
+            
+            requestScreenWakeLock();
+            initBackgroundAudioKeeper(); // Starts silent background loop to prevent mobile tab freeze
+
+            const streamLiveTelemetry = () => {
+                if (!isStreaming || !currentUserKey) return;
+
+                navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         lastKnownLat = pos.coords.latitude;
                         lastKnownLng = pos.coords.longitude;
-                        if (currentUserKey) {
-                            db.ref('sessions/' + currentUserKey).update({
-                                lat: lastKnownLat,
-                                lng: lastKnownLng,
-                                lastSeen: new Date().toLocaleTimeString()
-                            });
+                        const accuracy = Math.round(pos.coords.accuracy || 0);
+                        const nowMs = Date.now();
+                        const nowTime = new Date().toLocaleTimeString();
+
+                        // Write live coordinate to Firebase
+                        db.ref('sessions/' + currentUserKey).update({
+                            lat: lastKnownLat,
+                            lng: lastKnownLng,
+                            accuracy: accuracy,
+                            lastSeenMs: nowMs,
+                            lastSeen: nowTime
+                        });
+
+                        // Store breadcrumb trail point in Firebase
+                        db.ref('live_trails/' + currentUserKey).push({
+                            lat: lastKnownLat,
+                            lng: lastKnownLng,
+                            t: nowMs
+                        });
+
+                        pingCount++;
+                        const monitor = document.getElementById('empLiveGpsMonitor');
+                        if (monitor) {
+                            monitor.innerHTML = `
+                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping mr-1"></span>
+                                <strong>LIVE STREAM:</strong> ${lastKnownLat.toFixed(6)}, ${lastKnownLng.toFixed(6)} 
+                                (&plusmn;${accuracy}m) &bull; Ping #${pingCount} (${nowTime})
+                            `;
                         }
+
+                        if (isStreaming) setTimeout(streamLiveTelemetry, 2000);
                     },
-                    (err) => console.warn("GPS tracking warning:", err.message),
-                    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+                    (err) => {
+                        console.warn("Live telemetry poll warning:", err.message);
+                        if (isStreaming) setTimeout(streamLiveTelemetry, 3000);
+                    },
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
                 );
-            }
+            };
+
+            streamLiveTelemetry();
         }
 
         // ================= PUNCH OUT WITH FINAL GPS CAPTURE =================
@@ -671,12 +796,14 @@
             const navBtn = document.getElementById('navPunchOutBtn');
             const portalBtn = document.getElementById('portalPunchOutBtn');
             
-            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Exit GPS...`;
-            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Exit GPS...`;
+            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locking Exit GPS...`;
+            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locking Exit GPS...`;
 
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
+            isStreaming = false;
+            stopBackgroundAudioKeeper(); // Stop audio loop
+
+            if (wakeLock) {
+                wakeLock.release().then(() => { wakeLock = null; });
             }
 
             const now = Date.now();
@@ -711,6 +838,7 @@
                         punchOut: punchOutTimestamp,
                         punchOutTimeMs: timestampMs,
                         isActive: false,
+                        lastSeenMs: timestampMs,
                         lastSeen: punchOutTimestamp
                     });
 
@@ -718,7 +846,6 @@
                     const shiftDuration = formatDuration(timestampMs - startMs);
                     const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
 
-                    // Automated Telegram Alert for Punch Out
                     triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
                 });
             }
@@ -752,7 +879,7 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD & ROSTER MANAGEMENT =================
+        // ================= ADMIN DASHBOARD =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -760,6 +887,7 @@
                 document.getElementById('adminDashboardSection').classList.remove('hidden');
                 initMap();
                 listenToCloudData();
+                listenToMovementTrails();
                 listenToRegisteredEmployees();
             } else {
                 document.getElementById('adminError').classList.remove('hidden');
@@ -769,6 +897,17 @@
         function logoutAdmin() {
             document.getElementById('adminDashboardSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function toggleAutoFollow() {
+            autoFollowMap = !autoFollowMap;
+            document.getElementById('followBtnText').innerText = autoFollowMap ? "Street Auto-Focus: ON" : "Street Auto-Focus: OFF";
+        }
+
+        function focusOnPerson(lat, lng) {
+            if (!leafletMap || !lat || !lng) return;
+            leafletMap.setView([lat, lng], 18, { animate: true });
+            window.scrollTo({ top: document.getElementById('adminLiveMap').offsetTop - 80, behavior: 'smooth' });
         }
 
         function addRegisteredEmployee(e) {
@@ -916,15 +1055,38 @@
 
         function initMap() {
             if (!leafletMap) {
-                leafletMap = L.map('adminLiveMap').setView([20.5937, 78.9629], 5);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+                leafletMap = L.map('adminLiveMap', { maxZoom: 19 }).setView([20.5937, 78.9629], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(leafletMap);
             }
             setTimeout(() => {
                 if (leafletMap) leafletMap.invalidateSize();
             }, 300);
         }
 
-        // ================= REAL-TIME TABLE AUDIT WITH DATE COLUMN =================
+        function listenToMovementTrails() {
+            db.ref('live_trails').on('value', (snapshot) => {
+                const trailsData = snapshot.val() || {};
+                
+                Object.keys(trailsData).forEach((key) => {
+                    const pointsObj = trailsData[key];
+                    const latLngs = Object.values(pointsObj).map(p => [p.lat, p.lng]);
+                    
+                    if (latLngs.length > 1) {
+                        if (mapTrails[key]) {
+                            mapTrails[key].setLatLngs(latLngs);
+                        } else {
+                            mapTrails[key] = L.polyline(latLngs, {
+                                color: '#4f46e5',
+                                weight: 4,
+                                opacity: 0.8,
+                                dashArray: '6, 8'
+                            }).addTo(leafletMap);
+                        }
+                    }
+                });
+            });
+        }
+
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -932,11 +1094,8 @@
                 const tableBody = document.getElementById('adminAuditTableBody');
                 tableBody.innerHTML = '';
 
-                for (let key in mapMarkers) {
-                    leafletMap.removeLayer(mapMarkers[key]);
-                }
-                mapMarkers = {};
                 let bounds = [];
+                let latestActiveCoord = null;
 
                 if (Object.keys(data).length === 0) {
                     tableBody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No attendance entries recorded yet.</td></tr>`;
@@ -977,16 +1136,35 @@
 
                     if (s.lat && s.lng && s.isActive) {
                         bounds.push([s.lat, s.lng]);
-                        const marker = L.circleMarker([s.lat, s.lng], {
-                            radius: 8,
-                            fillColor: pinColor,
-                            color: '#fff',
-                            weight: 2,
-                            fillOpacity: 0.9
-                        }).addTo(leafletMap);
+                        latestActiveCoord = [s.lat, s.lng];
 
-                        marker.bindPopup(`<b>${s.name}</b> (${s.type})<br/>${s.venue}<br/>Last Seen: ${s.lastSeen}`);
-                        mapMarkers[key] = marker;
+                        const customRadarIcon = L.divIcon({
+                            className: 'custom-live-pin',
+                            html: `<div class="live-marker-pulse" style="background-color: ${pinColor};"><i class="fa-solid fa-location-dot"></i></div>`,
+                            iconSize: [26, 26],
+                            iconAnchor: [13, 13]
+                        });
+
+                        if (mapMarkers[key]) {
+                            mapMarkers[key].setLatLng([s.lat, s.lng]);
+                            mapMarkers[key].setIcon(customRadarIcon);
+                        } else {
+                            const marker = L.marker([s.lat, s.lng], { icon: customRadarIcon }).addTo(leafletMap);
+                            mapMarkers[key] = marker;
+                        }
+
+                        const accuracyText = s.accuracy ? `(&plusmn;${s.accuracy}m)` : '';
+                        mapMarkers[key].bindPopup(`
+                            <div class="text-xs">
+                                <strong style="color: ${pinColor}">${s.name} (${s.type})</strong><br/>
+                                <strong>Venue:</strong> ${s.venue}<br/>
+                                <strong>Role:</strong> ${s.role}<br/>
+                                <span class="text-[10px] text-emerald-600 font-mono font-bold">📡 Live Stream Ping: ${s.lastSeen || 'Just now'} ${accuracyText}</span>
+                            </div>
+                        `);
+                    } else if (mapMarkers[key]) {
+                        leafletMap.removeLayer(mapMarkers[key]);
+                        delete mapMarkers[key];
                     }
 
                     const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
@@ -1005,13 +1183,14 @@
                         if (s.isActive) {
                             locationMarkup = `
                                 <div>
-                                    <div class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live Tracking
+                                    <div class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live 2s Streaming
                                     </div>
-                                    <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-                                    <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
-                                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> View Live Map
-                                    </a>
+                                    <div class="font-mono text-[11px] text-slate-800 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
+                                    <div class="text-[10px] text-slate-500 font-mono">Ping: ${s.lastSeen || 'Just now'}</div>
+                                    <button onclick="focusOnPerson(${s.lat}, ${s.lng})" class="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                                        <i class="fa-solid fa-crosshairs"></i> Track on Map
+                                    </button>
                                 </div>
                             `;
                         } else {
@@ -1021,15 +1200,15 @@
                                         <i class="fa-solid fa-location-pin-lock text-rose-500"></i> Punch-Out Location
                                     </div>
                                     <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-                                    <div class="text-[10px] text-slate-400">Captured at: ${s.punchOut || s.lastSeen}</div>
-                                    <a href="https://maps.google.com/?q=${s.lat},${s.lng}" target="_blank" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1 mt-0.5">
-                                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> View Exit Spot
-                                    </a>
+                                    <div class="text-[10px] text-slate-400">Captured: ${s.punchOut || s.lastSeen}</div>
+                                    <button onclick="focusOnPerson(${s.lat}, ${s.lng})" class="mt-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1">
+                                        <i class="fa-solid fa-map-pin"></i> View Exit Spot
+                                    </button>
                                 </div>
                             `;
                         }
                     } else {
-                        locationMarkup = `<span class="text-slate-400 italic">No GPS coordinates recorded</span>`;
+                        locationMarkup = `<span class="text-slate-400 italic">Connecting GPS stream...</span>`;
                     }
 
                     const tr = document.createElement('tr');
@@ -1068,7 +1247,13 @@
                     tableBody.appendChild(tr);
                 });
 
-                if (bounds.length > 0) leafletMap.fitBounds(bounds, { padding: [50, 50] });
+                if (autoFollowMap) {
+                    if (bounds.length === 1 && latestActiveCoord) {
+                        leafletMap.setView(latestActiveCoord, 18, { animate: true });
+                    } else if (bounds.length > 1) {
+                        leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+                    }
+                }
             });
         }
 
@@ -1116,7 +1301,7 @@
                 const s = cachedSessions[key];
                 const mapsUrl = s.lat && s.lng ? `https://maps.google.com/?q=${s.lat},${s.lng}` : 'N/A';
                 const status = s.isActive ? 'Active' : 'Punched Out';
-                const locationType = s.isActive ? 'Live Stream Location' : 'Final Exit (Punch-Out) Location';
+                const locationType = s.isActive ? 'Live 2s Telemetry Stream' : 'Final Exit (Punch-Out) Location';
 
                 const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
                 const totalDayWorked = formatDuration(dailyTotalMsMap[`${s.id}_${dateKey}`] || 0);
@@ -1161,9 +1346,9 @@
 
         function clearAuditHistory() {
             if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
-                db.ref('sessions').remove(() => {
-                    alert("All attendance history has been cleared.");
-                });
+                db.ref('sessions').remove();
+                db.ref('live_trails').remove();
+                alert("All attendance history and movement trails have been cleared.");
             }
         }
     </script>
