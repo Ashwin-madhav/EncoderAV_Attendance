@@ -401,7 +401,9 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Global Telegram Bot configuration
+        // -------------------------------------------------------------
+        // YOUR TELEGRAM BOT CONFIGURATION (Global for all devices)
+        // -------------------------------------------------------------
         const TELEGRAM_BOT_TOKEN = "8626206203:AAGCupIhfUb-0LTQ8cnvKtmJtkD6LGYH1dU";
         const TELEGRAM_CHAT_ID = "8440705611";
         const ADMIN_WHATSAPP_PHONE = "919043891097";
@@ -422,8 +424,38 @@
         let autoFollowMap = true;
         const ADMIN_PASSCODE = "admin123";
 
+        // ================= PAGE VISIBILITY LISTENER & AUTO-RECOVERY =================
+        document.addEventListener("visibilitychange", () => {
+            console.log("Page visibility:", document.visibilityState);
+            
+            // When user returns to the tab from minimized/switched app
+            if (document.visibilityState === "visible") {
+                if (isStreaming && currentUserKey) {
+                    requestScreenWakeLock();
+                    initBackgroundAudioKeeper();
+                    // Force an immediate GPS satellite calculation on return
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                lastKnownLat = pos.coords.latitude;
+                                lastKnownLng = pos.coords.longitude;
+                                db.ref('sessions/' + currentUserKey).update({
+                                    lat: lastKnownLat,
+                                    lng: lastKnownLng,
+                                    accuracy: Math.round(pos.coords.accuracy || 0),
+                                    lastSeenMs: Date.now(),
+                                    lastSeen: new Date().toLocaleTimeString()
+                                });
+                            },
+                            (err) => console.warn("Visibility resume GPS ping error:", err.message),
+                            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                        );
+                    }
+                }
+            }
+        });
+
         // ================= BACKGROUND AUDIO KEEPALIVE ENGINE =================
-        // Generates a 1-second silent WAV loop in memory to keep iOS Safari & Android Chrome active when minimized
         function initBackgroundAudioKeeper() {
             try {
                 if (!backgroundAudio) {
@@ -730,14 +762,14 @@
             }
         }
 
-        // ================= CONTINUOUS REAL-TIME GPS STREAMER WITH AUDIO KEEPALIVE =================
+        // ================= CONTINUOUS REAL-TIME GPS STREAMER =================
         function startLiveLocationTracking() {
             if (!("geolocation" in navigator)) return;
             isStreaming = true;
             pingCount = 0;
             
             requestScreenWakeLock();
-            initBackgroundAudioKeeper(); // Starts silent background loop to prevent mobile tab freeze
+            initBackgroundAudioKeeper();
 
             const streamLiveTelemetry = () => {
                 if (!isStreaming || !currentUserKey) return;
@@ -750,7 +782,6 @@
                         const nowMs = Date.now();
                         const nowTime = new Date().toLocaleTimeString();
 
-                        // Write live coordinate to Firebase
                         db.ref('sessions/' + currentUserKey).update({
                             lat: lastKnownLat,
                             lng: lastKnownLng,
@@ -759,7 +790,6 @@
                             lastSeen: nowTime
                         });
 
-                        // Store breadcrumb trail point in Firebase
                         db.ref('live_trails/' + currentUserKey).push({
                             lat: lastKnownLat,
                             lng: lastKnownLng,
@@ -800,7 +830,7 @@
             if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locking Exit GPS...`;
 
             isStreaming = false;
-            stopBackgroundAudioKeeper(); // Stop audio loop
+            stopBackgroundAudioKeeper();
 
             if (wakeLock) {
                 wakeLock.release().then(() => { wakeLock = null; });
