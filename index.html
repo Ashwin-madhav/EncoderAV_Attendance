@@ -440,7 +440,6 @@
         let mapMarkers = {};
         let mapTrails = {};
         let cachedSessions = {};
-        let cachedDutyData = {};
         let cachedRoster = {};
         let autoFollowMap = true;
         const ADMIN_PASSCODE = "admin123";
@@ -534,7 +533,7 @@
         }
         initRoster();
 
-        // Auto-Resume Active Shift on Page Reload (Prevents Duplicate Entries)
+        // Auto-Resume Active Shift on Page Reload
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
             if (savedSessionKey && savedSessionKey !== 'null' && savedSessionKey !== 'undefined') {
@@ -596,7 +595,6 @@
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
-                        // Check if an ACTIVE shift already exists for this employee
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
@@ -611,7 +609,7 @@
                             }
 
                             if (activeKey) {
-                                // Resume the active ongoing shift (DO NOT CREATE NEW ENTRY)
+                                // Resume existing ongoing shift without duplicate entry
                                 currentUserKey = activeKey;
                                 lastKnownLat = activeData.lat;
                                 lastKnownLng = activeData.lng;
@@ -621,7 +619,7 @@
                                 loginBtn.disabled = false;
                                 loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                             } else {
-                                // Create a single new shift entry
+                                // Create clean canonical new shift
                                 captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` }, loginBtn);
                             }
                         });
@@ -662,7 +660,6 @@
             captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` }, loginBtn);
         }
 
-        // Single clean GPS prompt on punch-in
         function captureLocationAndStartSession(userData, btnElement) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -676,7 +673,7 @@
                         }
                     },
                     (err) => {
-                        console.warn("Initial GPS warning:", err.message);
+                        console.warn("Initial GPS prompt warning:", err.message);
                         createSessionAndNotify(userData, null, null);
                         if (btnElement) {
                             btnElement.disabled = false;
@@ -694,7 +691,6 @@
             }
         }
 
-        // Creates the single canonical shift record in Firebase
         function createSessionAndNotify(userData, initialLat, initialLng) {
             const now = Date.now();
             const punchInTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -764,7 +760,7 @@
             }
         }
 
-        // ================= STABLE CONTINUOUS GPS STREAM (SINGLE WATCHPOSITION LISTENER) =================
+        // ================= CONTINUOUS LIVE GPS TRACKING =================
         function startLiveLocationTracking() {
             if (!("geolocation" in navigator)) return;
             isStreaming = true;
@@ -773,7 +769,6 @@
             requestScreenWakeLock();
             initBackgroundAudioKeeper();
 
-            // Clear previous watch to prevent multiple listeners
             if (watchId) {
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
@@ -813,12 +808,12 @@
                         `;
                     }
                 },
-                (err) => console.warn("Live GPS stream notice:", err.message),
+                (err) => console.warn("Live GPS stream warning:", err.message),
                 { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
         }
 
-        // ================= PUNCH OUT & UPDATE THE SAME SHIFT (EXACT DATES & HOURS) =================
+        // ================= PUNCH OUT (ATOMIC KEY LOCK & ACCURATE CAPTURE) =================
         function handleLogout() {
             if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
@@ -845,7 +840,6 @@
             const punchOutTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const punchOutDate = new Date(now).toISOString().slice(0, 10);
 
-            // Fetch final exit GPS reading
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
@@ -863,37 +857,46 @@
         }
 
         function finalizePunchOut(exitLat, exitLng, punchOutDate, punchOutTime, timestampMs) {
-            // Strictly update the exact ongoing shift record
-            if (currentUserKey && currentUserKey !== 'null' && currentUserKey !== 'undefined') {
-                db.ref('sessions/' + currentUserKey).once('value', (snapshot) => {
+            // ATOMIC LOCK: Cache target session key locally so asynchronous operations don't lose it
+            const targetSessionKey = currentUserKey || localStorage.getItem('eav_active_session_key');
+
+            if (targetSessionKey && targetSessionKey !== 'null' && targetSessionKey !== 'undefined') {
+                const finalLat = exitLat || lastKnownLat || null;
+                const finalLng = exitLng || lastKnownLng || null;
+
+                // 1. Direct Atomic Update on the exact session in Firebase
+                db.ref('sessions/' + targetSessionKey).update({
+                    lat: finalLat,
+                    lng: finalLng,
+                    exitLat: finalLat,
+                    exitLng: finalLng,
+                    punchOutDate: punchOutDate,
+                    punchOutTime: punchOutTime,
+                    punchOut: punchOutTime,
+                    punchOutTimeMs: timestampMs,
+                    isActive: false,
+                    lastSeenMs: timestampMs,
+                    lastSeen: punchOutTime
+                }).then(() => {
+                    console.log("Punch-out date & time confirmed in cloud for key:", targetSessionKey);
+                }).catch(err => {
+                    console.error("Firebase update error:", err);
+                });
+
+                // 2. Fetch Shift details for Telegram Notification
+                db.ref('sessions/' + targetSessionKey).once('value', (snapshot) => {
                     if (snapshot.exists()) {
                         const session = snapshot.val() || {};
-                        const finalLat = exitLat || lastKnownLat || null;
-                        const finalLng = exitLng || lastKnownLng || null;
-
-                        db.ref('sessions/' + currentUserKey).update({
-                            lat: finalLat,
-                            lng: finalLng,
-                            exitLat: finalLat,
-                            exitLng: finalLng,
-                            punchOutDate: punchOutDate,
-                            punchOutTime: punchOutTime,
-                            punchOut: punchOutTime,
-                            punchOutTimeMs: timestampMs,
-                            isActive: false,
-                            lastSeenMs: timestampMs,
-                            lastSeen: punchOutTime
-                        });
-
                         const startMs = session.punchInTimeMs || timestampMs;
                         const shiftDuration = formatDuration(timestampMs - startMs);
                         const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
 
-                        triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name || 'Staff'}\n📅 In: ${session.punchInDate} at ${session.punchInTime || session.punchIn}\n📅 Out: ${punchOutDate} at ${punchOutTime}\n⏱️ Total Shift Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
+                        triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name || 'Staff'} (${session.subInfo || ''})\n📅 In: ${session.punchInDate || '--'} at ${session.punchInTime || session.punchIn || '--'}\n📅 Out: ${punchOutDate} at ${punchOutTime}\n⏱️ Duty Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
                     }
                 });
             }
 
+            // Cleanup local state
             localStorage.removeItem('eav_active_session_key');
             currentUserKey = null;
             lastKnownLat = null;
@@ -1138,13 +1141,13 @@
             });
         }
 
-        // ================= REAL-TIME TABLE AUDIT WITH CLEAN SHIFT DATA =================
+        // ================= REAL-TIME TABLE AUDIT (CLEAN SHIFT RENDERING) =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const rawData = snapshot.val() || {};
                 const validData = {};
 
-                // Filter out broken/ghost records automatically
+                // Filter out broken records automatically
                 Object.keys(rawData).forEach((k) => {
                     const item = rawData[k];
                     if (item && typeof item === 'object' && item.name && item.name !== 'undefined' && item.id && item.id !== 'undefined') {
@@ -1204,7 +1207,7 @@
                         delete mapMarkers[key];
                     }
 
-                    // Calculate accurate Shift Duration (Supports night shifts across days)
+                    // Shift Duration calculation
                     const startMs = s.punchInTimeMs || 0;
                     let shiftMs = 0;
                     if (startMs) {
@@ -1215,20 +1218,25 @@
                         }
                     }
 
-                    // Format Date Column (e.g. 2026-08-28 or overnight 2026-08-28 → 2026-08-29)
+                    // Date formatting (Supports cross-day night shifts)
                     let dateDisplay = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
                     if (!s.isActive && s.punchOutDate && s.punchOutDate !== '--' && s.punchOutDate !== s.punchInDate) {
                         dateDisplay += `<div class="text-[10px] text-indigo-600 font-normal">to ${s.punchOutDate}</div>`;
                     }
 
-                    // Punch-In & Punch-Out Timestamps
-                    const punchInDisplay = `<div><strong class="font-mono">${s.punchInTime || s.punchIn || '--'}</strong><div class="text-[10px] text-slate-400">${s.punchInDate || s.eventDate || ''}</div></div>`;
-                    
+                    // Punch-In Display
+                    const inTime = s.punchInTime || s.punchIn || '--';
+                    const inDate = s.punchInDate || s.eventDate || '';
+                    const punchInDisplay = `<div><strong class="font-mono text-emerald-700 text-xs">${inTime}</strong><div class="text-[10px] text-slate-400 font-semibold">${inDate}</div></div>`;
+
+                    // Punch-Out Display
                     let punchOutDisplay = "";
                     if (s.isActive) {
-                        punchOutDisplay = `<span class="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> On Duty (Active)</span>`;
+                        punchOutDisplay = `<span class="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px]"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> On Duty (Active)</span>`;
                     } else {
-                        punchOutDisplay = `<div><strong class="font-mono text-rose-600">${s.punchOutTime || s.punchOut || '--'}</strong><div class="text-[10px] text-slate-400">${s.punchOutDate || ''}</div></div>`;
+                        const outTime = s.punchOutTime || s.punchOut || '--';
+                        const outDate = s.punchOutDate || s.punchInDate || '';
+                        punchOutDisplay = `<div><strong class="font-mono text-rose-600 text-xs">${outTime}</strong><div class="text-[10px] text-slate-400 font-semibold">${outDate}</div></div>`;
                     }
 
                     // Unified Location Display
@@ -1323,11 +1331,10 @@
 
             const monthlyAggregates = {};
 
-            // 1. Calculate Shift Durations & Monthly Groupings
             keys.forEach((key) => {
                 const s = cachedSessions[key];
-                const dateStr = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
-                const monthKey = dateStr.slice(0, 7); // e.g. "2026-08"
+                const inDate = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
+                const monthKey = inDate.slice(0, 7); // e.g. "2026-08"
                 const userMonthKey = `${s.id}_${monthKey}`;
 
                 if (!monthlyAggregates[userMonthKey]) {
@@ -1353,7 +1360,7 @@
 
                 s._shiftMs = shiftMs;
                 monthlyAggregates[userMonthKey].totalDurationMs += shiftMs;
-                monthlyAggregates[userMonthKey].uniqueDaysSet.add(dateStr);
+                monthlyAggregates[userMonthKey].uniqueDaysSet.add(inDate);
             });
 
             const headers = [
@@ -1428,7 +1435,6 @@
                 rows.push(row.join(","));
             });
 
-            // Summary section at bottom of CSV
             rows.push("\r\n");
             rows.push("--- MONTHLY WORKING HOURS & ATTENDANCE SUMMARY TABLE ---");
             rows.push("Month,Employee ID,Employee Name,User Category,Total Days Worked,Monthly Total Duty Hours,Monthly Average Hours / Day");
