@@ -53,9 +53,31 @@
             0% { transform: scale(0.6); opacity: 1; }
             100% { transform: scale(2.4); opacity: 0; }
         }
+
+        #pocketOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: black;
+            z-index: 9999;
+            color: #475569;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col font-sans">
+
+    <!-- Black Screen Pocket Mode Overlay -->
+    <div id="pocketOverlay" onclick="exitPocketMode()">
+        <i class="fa-solid fa-battery-three-quarters text-3xl text-emerald-500 mb-3 animate-pulse"></i>
+        <h3 class="text-sm font-bold text-slate-300">POCKET MODE ACTIVE</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-xs">Screen is dimmed to save battery while streaming continuous background GPS to Admin.</p>
+        <p class="text-[11px] text-indigo-400 mt-4 underline font-semibold">Tap anywhere to wake screen</p>
+    </div>
 
     <!-- Top Navigation Header -->
     <header class="bg-indigo-700 text-white shadow-lg sticky top-0 z-40">
@@ -66,7 +88,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none">EAV Attendance Cloud</h1>
-                    <span class="text-xs text-indigo-200">Street-Level Live Telemetry & Fleet Tracking</span>
+                    <span class="text-xs text-indigo-200">Shift Telemetry & Fleet Tracking</span>
                 </div>
             </div>
 
@@ -89,7 +111,7 @@
             <div class="bg-indigo-600 p-6 text-white text-center">
                 <i class="fa-solid fa-shield-halved text-4xl mb-2 text-indigo-200"></i>
                 <h2 class="text-2xl font-bold">Portal Access</h2>
-                <p class="text-xs text-indigo-100 mt-1">Select your access mode</p>
+                <p class="text-xs text-indigo-100 mt-1">Select your access mode to punch in</p>
             </div>
 
             <!-- Login Tabs -->
@@ -175,23 +197,23 @@
 
         <!-- ================= 2. EMPLOYEE / GUEST PORTAL ================= -->
         <section id="userPortalSection" class="hidden max-w-3xl mx-auto space-y-6">
-            <!-- Active Status Banner with Live Telemetry Monitor -->
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-emerald-900/60 border border-emerald-400/40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Background Telemetry Active
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Shift Telemetry Active
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
                     
-                    <!-- Live Mobile Telemetry Real-Time Status -->
                     <div id="empLiveGpsMonitor" class="mt-2.5 bg-emerald-950/50 border border-emerald-300/40 px-3 py-2 rounded-lg text-xs font-mono text-emerald-100 flex items-center gap-2">
                         <i class="fa-solid fa-satellite-dish animate-spin text-emerald-300"></i> Connecting Live GPS Stream...
                     </div>
                     
-                    <p class="text-[10px] text-emerald-200 mt-2 flex items-center gap-1.5">
-                        <i class="fa-solid fa-volume-high text-emerald-300"></i> Background audio keepalive is active to keep GPS streaming when minimized.
-                    </p>
+                    <div class="mt-3">
+                        <button type="button" onclick="enterPocketMode()" class="bg-emerald-900 hover:bg-emerald-950 border border-emerald-400/50 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-moon"></i> <span>Pocket Mode (Dim Screen & Track)</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
                     <a id="directWhatsappBtn" href="#" target="_blank" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5 transition">
@@ -248,11 +270,11 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Street-level live tracking, real-time route trails, and fleet monitoring.</p>
+                    <p class="text-xs text-slate-500">Live shift tracking, exact punch-in/out timestamps, and monthly calculations.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
-                        <i class="fa-solid fa-file-csv text-sm"></i> Export CSV
+                        <i class="fa-solid fa-file-csv text-sm"></i> Export CSV (With Monthly Avgs)
                     </button>
                     <button onclick="clearAuditHistory()" class="px-4 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition">
                         <i class="fa-solid fa-trash-can mr-1"></i> Clear Logs
@@ -356,7 +378,7 @@
                 <div id="adminLiveMap"></div>
             </div>
 
-            <!-- LIVE DATA TABLE WITH DEDICATED DATE COLUMN -->
+            <!-- LIVE DATA TABLE WITH EXACT PUNCH-IN & PUNCH-OUT TIMESTAMPS -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
@@ -368,14 +390,15 @@
                                 <th class="p-3">User Details</th>
                                 <th class="p-3">Role & Venue</th>
                                 <th class="p-3 bg-amber-50 text-amber-900 border-l border-amber-100 text-center">
-                                    <i class="fa-solid fa-stopwatch mr-1"></i> Duty Hours (Today)
+                                    <i class="fa-solid fa-stopwatch mr-1"></i> Shift Duty Hours
                                 </th>
-                                <th class="p-3 bg-emerald-50 text-emerald-900 border-l border-emerald-100">Punch-In Time</th>
-                                <th class="p-3 bg-rose-50 text-rose-900 border-l border-rose-100">Punch-Out Time</th>
+                                <th class="p-3 bg-emerald-50 text-emerald-900 border-l border-emerald-100">Punch-In Date & Time</th>
+                                <th class="p-3 bg-rose-50 text-rose-900 border-l border-rose-100">Punch-Out Date & Time</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">
-                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Live Stream / Action (Admin)
+                                    <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Live Stream / Exit Location
                                 </th>
+                                <th class="p-3 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="adminAuditTableBody" class="divide-y divide-slate-100"></tbody>
@@ -401,15 +424,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // -------------------------------------------------------------
-        // YOUR TELEGRAM BOT CONFIGURATION (Global for all devices)
-        // -------------------------------------------------------------
         const TELEGRAM_BOT_TOKEN = "8626206203:AAGCupIhfUb-0LTQ8cnvKtmJtkD6LGYH1dU";
         const TELEGRAM_CHAT_ID = "8440705611";
         const ADMIN_WHATSAPP_PHONE = "919043891097";
 
         let currentUserKey = null;
         let isStreaming = false;
+        let watchId = null;
         let wakeLock = null;
         let backgroundAudio = null;
         let pingCount = 0;
@@ -424,38 +445,7 @@
         let autoFollowMap = true;
         const ADMIN_PASSCODE = "admin123";
 
-        // ================= PAGE VISIBILITY LISTENER & AUTO-RECOVERY =================
-        document.addEventListener("visibilitychange", () => {
-            console.log("Page visibility:", document.visibilityState);
-            
-            // When user returns to the tab from minimized/switched app
-            if (document.visibilityState === "visible") {
-                if (isStreaming && currentUserKey) {
-                    requestScreenWakeLock();
-                    initBackgroundAudioKeeper();
-                    // Force an immediate GPS satellite calculation on return
-                    if ("geolocation" in navigator) {
-                        navigator.geolocation.getCurrentPosition(
-                            (pos) => {
-                                lastKnownLat = pos.coords.latitude;
-                                lastKnownLng = pos.coords.longitude;
-                                db.ref('sessions/' + currentUserKey).update({
-                                    lat: lastKnownLat,
-                                    lng: lastKnownLng,
-                                    accuracy: Math.round(pos.coords.accuracy || 0),
-                                    lastSeenMs: Date.now(),
-                                    lastSeen: new Date().toLocaleTimeString()
-                                });
-                            },
-                            (err) => console.warn("Visibility resume GPS ping error:", err.message),
-                            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-                        );
-                    }
-                }
-            }
-        });
-
-        // ================= BACKGROUND AUDIO KEEPALIVE ENGINE =================
+        // ================= STABLE BACKGROUND AUDIO KEEPALIVE =================
         function initBackgroundAudioKeeper() {
             try {
                 if (!backgroundAudio) {
@@ -463,18 +453,16 @@
                     backgroundAudio = new Audio(silentWavBase64);
                     backgroundAudio.loop = true;
                 }
-                backgroundAudio.play().then(() => {
-                    console.log("Background Audio Keeper active: Mobile browser will stay awake when minimized.");
-                }).catch(e => console.warn("Audio play interaction required:", e.message));
+                backgroundAudio.play().catch(e => console.warn("Audio play warning:", e.message));
 
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
-                        title: 'EAV Live Fleet Telemetry Active',
-                        artist: 'Background GPS Tracking Active'
+                        title: 'EAV Live Shift Telemetry Active',
+                        artist: 'Background Telemetry Stream'
                     });
                 }
             } catch (err) {
-                console.warn("Audio keeper error:", err);
+                console.warn("Audio keeper warning:", err);
             }
         }
 
@@ -491,23 +479,26 @@
                     wakeLock = await navigator.wakeLock.request('screen');
                 }
             } catch (err) {
-                console.warn('Wake Lock error:', err.message);
+                console.warn('Wake Lock warning:', err.message);
             }
+        }
+
+        function enterPocketMode() {
+            document.getElementById('pocketOverlay').style.display = 'flex';
+        }
+
+        function exitPocketMode() {
+            document.getElementById('pocketOverlay').style.display = 'none';
         }
 
         function triggerTelegramNotification(msg) {
             const token = TELEGRAM_BOT_TOKEN || localStorage.getItem("telegram_bot_token") || "";
             const chatId = TELEGRAM_CHAT_ID || localStorage.getItem("telegram_chat_id") || "";
 
-            if (!token || !chatId) {
-                console.warn("Telegram Token or Chat ID not configured.");
-                return;
-            }
+            if (!token || !chatId) return;
 
             const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`;
-
             fetch(url, { method: 'GET', keepalive: true, mode: 'no-cors' })
-                .then(() => console.log("Telegram alert sent successfully!"))
                 .catch(err => console.error("Telegram alert error:", err));
         }
 
@@ -543,14 +534,14 @@
         }
         initRoster();
 
-        // Auto-Resume on Page Reload / Tab Reopen
+        // Auto-Resume Active Shift on Page Reload (Prevents Duplicate Entries)
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
-            if (savedSessionKey) {
+            if (savedSessionKey && savedSessionKey !== 'null' && savedSessionKey !== 'undefined') {
                 db.ref('sessions/' + savedSessionKey).once('value', (snapshot) => {
                     if (snapshot.exists()) {
                         const sessionData = snapshot.val();
-                        if (sessionData.isActive === true) {
+                        if (sessionData && sessionData.isActive === true && sessionData.name) {
                             currentUserKey = savedSessionKey;
                             lastKnownLat = sessionData.lat;
                             lastKnownLng = sessionData.lng;
@@ -587,7 +578,7 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN =================
+        // ================= EMPLOYEE LOGIN & SHIFT RESUME (ONE ENTRY PER SHIFT) =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -597,7 +588,7 @@
             const loginBtn = document.getElementById('empLoginBtn');
 
             loginBtn.disabled = true;
-            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS & Punching In...`;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Verifying & Punching In...`;
 
             db.ref('registered_employees/' + idInput).once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -605,13 +596,14 @@
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
+                        // Check if an ACTIVE shift already exists for this employee
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
                             let activeData = null;
 
                             for (let key in sessions) {
-                                if (sessions[key].isActive === true) {
+                                if (sessions[key] && sessions[key].isActive === true && sessions[key].name) {
                                     activeKey = key;
                                     activeData = sessions[key];
                                     break;
@@ -619,6 +611,7 @@
                             }
 
                             if (activeKey) {
+                                // Resume the active ongoing shift (DO NOT CREATE NEW ENTRY)
                                 currentUserKey = activeKey;
                                 lastKnownLat = activeData.lat;
                                 lastKnownLng = activeData.lng;
@@ -628,6 +621,7 @@
                                 loginBtn.disabled = false;
                                 loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
                             } else {
+                                // Create a single new shift entry
                                 captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` }, loginBtn);
                             }
                         });
@@ -668,6 +662,7 @@
             captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` }, loginBtn);
         }
 
+        // Single clean GPS prompt on punch-in
         function captureLocationAndStartSession(userData, btnElement) {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
@@ -681,14 +676,14 @@
                         }
                     },
                     (err) => {
-                        console.warn("Initial GPS prompt warning:", err.message);
+                        console.warn("Initial GPS warning:", err.message);
                         createSessionAndNotify(userData, null, null);
                         if (btnElement) {
                             btnElement.disabled = false;
                             btnElement.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Punch In</span>`;
                         }
                     },
-                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
                 );
             } else {
                 createSessionAndNotify(userData, null, null);
@@ -699,6 +694,7 @@
             }
         }
 
+        // Creates the single canonical shift record in Firebase
         function createSessionAndNotify(userData, initialLat, initialLng) {
             const now = Date.now();
             const punchInTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -710,11 +706,15 @@
             localStorage.setItem('eav_active_session_key', currentUserKey);
 
             const sessionData = {
-                ...userData,
+                id: userData.id || 'N/A',
+                name: userData.name || 'Staff Member',
+                type: userData.type || 'Employee',
+                subInfo: userData.subInfo || '',
                 punchInDate: punchDate,
-                punchIn: punchInTime,
+                punchInTime: punchInTime,
                 punchInTimeMs: now,
-                punchOut: '--',
+                punchOutDate: '--',
+                punchOutTime: '--',
                 punchOutTimeMs: null,
                 venue: 'Pending Venue Submission',
                 role: userData.type === 'Cab Driver' ? 'Cab Driver' : 'Pending Role',
@@ -722,6 +722,8 @@
                 eventTime: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 lat: initialLat,
                 lng: initialLng,
+                exitLat: null,
+                exitLng: null,
                 lastSeenMs: now,
                 lastSeen: punchInTime,
                 isActive: true
@@ -750,9 +752,9 @@
             document.getElementById('navUserName').innerText = data.name;
             document.getElementById('navUserRole').innerText = `${data.type} • ${data.subInfo}`;
             document.getElementById('userWelcomeTitle').innerText = `Hello, ${data.name}!`;
-            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchIn} (${data.punchInDate || data.eventDate}) | Session Active`;
+            document.getElementById('userPunchInDetails').innerText = `Punched in at: ${data.punchInTime || data.punchIn} (${data.punchInDate || data.eventDate}) | Shift Active`;
 
-            updateDirectWhatsAppLink(data.name, data.type, data.punchIn, data.punchInDate || data.eventDate, data.venue, "ACTIVE ON DUTY", "In Progress", data.lat, data.lng);
+            updateDirectWhatsAppLink(data.name, data.type, data.punchInTime || data.punchIn, data.punchInDate || data.eventDate, data.venue, "ACTIVE ON DUTY", "In Progress", data.lat, data.lng);
 
             if (data.venue && data.venue !== 'Pending Venue Submission') {
                 document.getElementById('dutyVenue').value = data.venue;
@@ -762,7 +764,7 @@
             }
         }
 
-        // ================= CONTINUOUS REAL-TIME GPS STREAMER =================
+        // ================= STABLE CONTINUOUS GPS STREAM (SINGLE WATCHPOSITION LISTENER) =================
         function startLiveLocationTracking() {
             if (!("geolocation" in navigator)) return;
             isStreaming = true;
@@ -771,112 +773,124 @@
             requestScreenWakeLock();
             initBackgroundAudioKeeper();
 
-            const streamLiveTelemetry = () => {
-                if (!isStreaming || !currentUserKey) return;
+            // Clear previous watch to prevent multiple listeners
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
 
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        lastKnownLat = pos.coords.latitude;
-                        lastKnownLng = pos.coords.longitude;
-                        const accuracy = Math.round(pos.coords.accuracy || 0);
-                        const nowMs = Date.now();
-                        const nowTime = new Date().toLocaleTimeString();
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    if (!isStreaming || !currentUserKey) return;
 
-                        db.ref('sessions/' + currentUserKey).update({
-                            lat: lastKnownLat,
-                            lng: lastKnownLng,
-                            accuracy: accuracy,
-                            lastSeenMs: nowMs,
-                            lastSeen: nowTime
-                        });
+                    lastKnownLat = pos.coords.latitude;
+                    lastKnownLng = pos.coords.longitude;
+                    const accuracy = Math.round(pos.coords.accuracy || 0);
+                    const nowMs = Date.now();
+                    const nowTime = new Date().toLocaleTimeString();
 
-                        db.ref('live_trails/' + currentUserKey).push({
-                            lat: lastKnownLat,
-                            lng: lastKnownLng,
-                            t: nowMs
-                        });
+                    db.ref('sessions/' + currentUserKey).update({
+                        lat: lastKnownLat,
+                        lng: lastKnownLng,
+                        accuracy: accuracy,
+                        lastSeenMs: nowMs,
+                        lastSeen: nowTime
+                    });
 
-                        pingCount++;
-                        const monitor = document.getElementById('empLiveGpsMonitor');
-                        if (monitor) {
-                            monitor.innerHTML = `
-                                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping mr-1"></span>
-                                <strong>LIVE STREAM:</strong> ${lastKnownLat.toFixed(6)}, ${lastKnownLng.toFixed(6)} 
-                                (&plusmn;${accuracy}m) &bull; Ping #${pingCount} (${nowTime})
-                            `;
-                        }
+                    db.ref('live_trails/' + currentUserKey).push({
+                        lat: lastKnownLat,
+                        lng: lastKnownLng,
+                        t: nowMs
+                    });
 
-                        if (isStreaming) setTimeout(streamLiveTelemetry, 2000);
-                    },
-                    (err) => {
-                        console.warn("Live telemetry poll warning:", err.message);
-                        if (isStreaming) setTimeout(streamLiveTelemetry, 3000);
-                    },
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-                );
-            };
-
-            streamLiveTelemetry();
+                    pingCount++;
+                    const monitor = document.getElementById('empLiveGpsMonitor');
+                    if (monitor) {
+                        monitor.innerHTML = `
+                            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping mr-1"></span>
+                            <strong>LIVE GPS:</strong> ${lastKnownLat.toFixed(5)}, ${lastKnownLng.toFixed(5)} 
+                            (&plusmn;${accuracy}m) &bull; Ping #${pingCount} (${nowTime})
+                        `;
+                    }
+                },
+                (err) => console.warn("Live GPS stream notice:", err.message),
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            );
         }
 
-        // ================= PUNCH OUT WITH FINAL GPS CAPTURE =================
+        // ================= PUNCH OUT & UPDATE THE SAME SHIFT (EXACT DATES & HOURS) =================
         function handleLogout() {
             if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
             const navBtn = document.getElementById('navPunchOutBtn');
             const portalBtn = document.getElementById('portalPunchOutBtn');
             
-            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locking Exit GPS...`;
-            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Locking Exit GPS...`;
+            if (navBtn) navBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Punching Out...`;
+            if (portalBtn) portalBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Punching Out...`;
 
             isStreaming = false;
             stopBackgroundAudioKeeper();
+            exitPocketMode();
+
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
 
             if (wakeLock) {
                 wakeLock.release().then(() => { wakeLock = null; });
             }
 
             const now = Date.now();
-            const punchOutTimestamp = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const punchOutTime = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const punchOutDate = new Date(now).toISOString().slice(0, 10);
 
+            // Fetch final exit GPS reading
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        finalizePunchOut(pos.coords.latitude, pos.coords.longitude, punchOutTimestamp, now);
+                        finalizePunchOut(pos.coords.latitude, pos.coords.longitude, punchOutDate, punchOutTime, now);
                     },
                     (err) => {
-                        console.warn("Could not get final GPS on exit, using last known position:", err.message);
-                        finalizePunchOut(lastKnownLat, lastKnownLng, punchOutTimestamp, now);
+                        console.warn("Using last known GPS on exit:", err.message);
+                        finalizePunchOut(lastKnownLat, lastKnownLng, punchOutDate, punchOutTime, now);
                     },
                     { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
                 );
             } else {
-                finalizePunchOut(lastKnownLat, lastKnownLng, punchOutTimestamp, now);
+                finalizePunchOut(lastKnownLat, lastKnownLng, punchOutDate, punchOutTime, now);
             }
         }
 
-        function finalizePunchOut(exitLat, exitLng, punchOutTimestamp, timestampMs) {
-            if (currentUserKey) {
+        function finalizePunchOut(exitLat, exitLng, punchOutDate, punchOutTime, timestampMs) {
+            // Strictly update the exact ongoing shift record
+            if (currentUserKey && currentUserKey !== 'null' && currentUserKey !== 'undefined') {
                 db.ref('sessions/' + currentUserKey).once('value', (snapshot) => {
-                    const session = snapshot.val() || {};
-                    const finalLat = exitLat || lastKnownLat || null;
-                    const finalLng = exitLng || lastKnownLng || null;
+                    if (snapshot.exists()) {
+                        const session = snapshot.val() || {};
+                        const finalLat = exitLat || lastKnownLat || null;
+                        const finalLng = exitLng || lastKnownLng || null;
 
-                    db.ref('sessions/' + currentUserKey).update({
-                        lat: finalLat,
-                        lng: finalLng,
-                        punchOut: punchOutTimestamp,
-                        punchOutTimeMs: timestampMs,
-                        isActive: false,
-                        lastSeenMs: timestampMs,
-                        lastSeen: punchOutTimestamp
-                    });
+                        db.ref('sessions/' + currentUserKey).update({
+                            lat: finalLat,
+                            lng: finalLng,
+                            exitLat: finalLat,
+                            exitLng: finalLng,
+                            punchOutDate: punchOutDate,
+                            punchOutTime: punchOutTime,
+                            punchOut: punchOutTime,
+                            punchOutTimeMs: timestampMs,
+                            isActive: false,
+                            lastSeenMs: timestampMs,
+                            lastSeen: punchOutTime
+                        });
 
-                    const startMs = session.punchInTimeMs || timestampMs;
-                    const shiftDuration = formatDuration(timestampMs - startMs);
-                    const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
+                        const startMs = session.punchInTimeMs || timestampMs;
+                        const shiftDuration = formatDuration(timestampMs - startMs);
+                        const mapsLink = (finalLat && finalLng) ? `https://maps.google.com/?q=${finalLat},${finalLng}` : 'GPS Unavailable';
 
-                    triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name}\n📍 Venue: ${session.venue}\n⏰ Out Time: ${punchOutTimestamp}\n⏱️ Duty Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
+                        triggerTelegramNotification(`🔔 *EAV ATTENDANCE ALERT - PUNCH OUT*\n👤 User: ${session.name || 'Staff'}\n📅 In: ${session.punchInDate} at ${session.punchInTime || session.punchIn}\n📅 Out: ${punchOutDate} at ${punchOutTime}\n⏱️ Total Shift Duration: ${shiftDuration}\n🗺️ Exit GPS: ${mapsLink}`);
+                    }
                 });
             }
 
@@ -898,7 +912,7 @@
 
         function submitEventDetails(e) {
             e.preventDefault();
-            if (currentUserKey) {
+            if (currentUserKey && currentUserKey !== 'null' && currentUserKey !== 'undefined') {
                 db.ref('sessions/' + currentUserKey).update({
                     role: document.getElementById('assignedRole').value,
                     venue: document.getElementById('dutyVenue').value,
@@ -938,6 +952,13 @@
             if (!leafletMap || !lat || !lng) return;
             leafletMap.setView([lat, lng], 18, { animate: true });
             window.scrollTo({ top: document.getElementById('adminLiveMap').offsetTop - 80, behavior: 'smooth' });
+        }
+
+        function deleteSessionRecord(sessionKey) {
+            if (confirm("Delete this shift record from the database?")) {
+                db.ref('sessions/' + sessionKey).remove();
+                db.ref('live_trails/' + sessionKey).remove();
+            }
         }
 
         function addRegisteredEmployee(e) {
@@ -1117,53 +1138,39 @@
             });
         }
 
+        // ================= REAL-TIME TABLE AUDIT WITH CLEAN SHIFT DATA =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                cachedSessions = data;
+                const rawData = snapshot.val() || {};
+                const validData = {};
+
+                // Filter out broken/ghost records automatically
+                Object.keys(rawData).forEach((k) => {
+                    const item = rawData[k];
+                    if (item && typeof item === 'object' && item.name && item.name !== 'undefined' && item.id && item.id !== 'undefined') {
+                        validData[k] = item;
+                    } else if (k === 'null' || k === 'undefined' || (item && (!item.name || item.name === 'undefined'))) {
+                        db.ref('sessions/' + k).remove();
+                    }
+                });
+
+                cachedSessions = validData;
                 const tableBody = document.getElementById('adminAuditTableBody');
                 tableBody.innerHTML = '';
 
                 let bounds = [];
                 let latestActiveCoord = null;
 
-                if (Object.keys(data).length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No attendance entries recorded yet.</td></tr>`;
+                if (Object.keys(validData).length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-400">No attendance shift records found.</td></tr>`;
                     return;
                 }
 
-                const dailyTotalMsMap = {};
-                const shiftDurationMsMap = {};
-
-                Object.keys(data).forEach((key) => {
-                    const s = data[key];
-                    const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
-                    const userDateKey = `${s.id}_${dateKey}`;
-
-                    let shiftMs = 0;
-                    const startMs = s.punchInTimeMs || (s.eventDate && s.punchIn ? new Date(`${s.eventDate} ${s.punchIn}`).getTime() : 0);
-
-                    if (startMs) {
-                        if (s.isActive) {
-                            shiftMs = Math.max(0, Date.now() - startMs);
-                        } else if (s.punchOutTimeMs) {
-                            shiftMs = Math.max(0, s.punchOutTimeMs - startMs);
-                        } else if (s.punchOut && s.punchOut !== '--') {
-                            const endMs = new Date(`${s.eventDate} ${s.punchOut}`).getTime();
-                            if (endMs > startMs) shiftMs = endMs - startMs;
-                        }
-                    }
-
-                    shiftDurationMsMap[key] = shiftMs;
-                    dailyTotalMsMap[userDateKey] = (dailyTotalMsMap[userDateKey] || 0) + shiftMs;
-                });
-
-                cachedDutyData = { dailyTotalMsMap, shiftDurationMsMap };
-
-                Object.keys(data).reverse().forEach((key) => {
-                    const s = data[key];
+                Object.keys(validData).reverse().forEach((key) => {
+                    const s = validData[key];
                     let pinColor = s.type === 'Cab Driver' ? '#f59e0b' : (s.type === 'Guest' ? '#10b981' : '#4f46e5');
 
+                    // ================= LIVE MAP MARKER =================
                     if (s.lat && s.lng && s.isActive) {
                         bounds.push([s.lat, s.lng]);
                         latestActiveCoord = [s.lat, s.lng];
@@ -1186,9 +1193,9 @@
                         const accuracyText = s.accuracy ? `(&plusmn;${s.accuracy}m)` : '';
                         mapMarkers[key].bindPopup(`
                             <div class="text-xs">
-                                <strong style="color: ${pinColor}">${s.name} (${s.type})</strong><br/>
-                                <strong>Venue:</strong> ${s.venue}<br/>
-                                <strong>Role:</strong> ${s.role}<br/>
+                                <strong style="color: ${pinColor}">${s.name} (${s.type || 'Staff'})</strong><br/>
+                                <strong>Venue:</strong> ${s.venue || 'Site'}<br/>
+                                <strong>Role:</strong> ${s.role || 'Duty'}<br/>
                                 <span class="text-[10px] text-emerald-600 font-mono font-bold">📡 Live Stream Ping: ${s.lastSeen || 'Just now'} ${accuracyText}</span>
                             </div>
                         `);
@@ -1197,28 +1204,44 @@
                         delete mapMarkers[key];
                     }
 
-                    const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
-                    const totalDayWorkedMs = dailyTotalMsMap[`${s.id}_${dateKey}`] || 0;
-                    const thisShiftWorkedMs = shiftDurationMsMap[key] || 0;
+                    // Calculate accurate Shift Duration (Supports night shifts across days)
+                    const startMs = s.punchInTimeMs || 0;
+                    let shiftMs = 0;
+                    if (startMs) {
+                        if (s.isActive) {
+                            shiftMs = Math.max(0, Date.now() - startMs);
+                        } else if (s.punchOutTimeMs) {
+                            shiftMs = Math.max(0, s.punchOutTimeMs - startMs);
+                        }
+                    }
 
+                    // Format Date Column (e.g. 2026-08-28 or overnight 2026-08-28 → 2026-08-29)
+                    let dateDisplay = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
+                    if (!s.isActive && s.punchOutDate && s.punchOutDate !== '--' && s.punchOutDate !== s.punchInDate) {
+                        dateDisplay += `<div class="text-[10px] text-indigo-600 font-normal">to ${s.punchOutDate}</div>`;
+                    }
+
+                    // Punch-In & Punch-Out Timestamps
+                    const punchInDisplay = `<div><strong class="font-mono">${s.punchInTime || s.punchIn || '--'}</strong><div class="text-[10px] text-slate-400">${s.punchInDate || s.eventDate || ''}</div></div>`;
+                    
                     let punchOutDisplay = "";
                     if (s.isActive) {
                         punchOutDisplay = `<span class="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> On Duty (Active)</span>`;
                     } else {
-                        punchOutDisplay = `<span class="font-mono text-rose-600 font-semibold">${s.punchOut || '--'}</span>`;
+                        punchOutDisplay = `<div><strong class="font-mono text-rose-600">${s.punchOutTime || s.punchOut || '--'}</strong><div class="text-[10px] text-slate-400">${s.punchOutDate || ''}</div></div>`;
                     }
 
+                    // Unified Location Display
                     let locationMarkup = "";
                     if (s.lat && s.lng) {
                         if (s.isActive) {
                             locationMarkup = `
                                 <div>
-                                    <div class="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
-                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live 2s Streaming
+                                    <div class="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live Tracking
                                     </div>
-                                    <div class="font-mono text-[11px] text-slate-800 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-                                    <div class="text-[10px] text-slate-500 font-mono">Ping: ${s.lastSeen || 'Just now'}</div>
-                                    <button onclick="focusOnPerson(${s.lat}, ${s.lng})" class="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                                    <div class="font-mono text-[11px] text-slate-800 mt-1 font-semibold">${Number(s.lat).toFixed(5)}, ${Number(s.lng).toFixed(5)}</div>
+                                    <button onclick="focusOnPerson(${s.lat}, ${s.lng})" class="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 shadow-xs">
                                         <i class="fa-solid fa-crosshairs"></i> Track on Map
                                     </button>
                                 </div>
@@ -1227,42 +1250,40 @@
                             locationMarkup = `
                                 <div>
                                     <div class="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[10px] font-bold">
-                                        <i class="fa-solid fa-location-pin-lock text-rose-500"></i> Punch-Out Location
+                                        <i class="fa-solid fa-location-pin-lock text-rose-500"></i> Punch-Out Exit Spot
                                     </div>
-                                    <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-                                    <div class="text-[10px] text-slate-400">Captured: ${s.punchOut || s.lastSeen}</div>
-                                    <button onclick="focusOnPerson(${s.lat}, ${s.lng})" class="mt-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1">
+                                    <div class="font-mono text-[11px] text-slate-700 mt-1 font-semibold">${Number(s.exitLat || s.lat).toFixed(5)}, ${Number(s.exitLng || s.lng).toFixed(5)}</div>
+                                    <button onclick="focusOnPerson(${s.exitLat || s.lat}, ${s.exitLng || s.lng})" class="mt-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1">
                                         <i class="fa-solid fa-map-pin"></i> View Exit Spot
                                     </button>
                                 </div>
                             `;
                         }
                     } else {
-                        locationMarkup = `<span class="text-slate-400 italic">Connecting GPS stream...</span>`;
+                        locationMarkup = `<span class="text-slate-400 italic">GPS Connecting...</span>`;
                     }
 
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50";
                     tr.innerHTML = `
                         <td class="p-3 bg-slate-50/50 font-mono font-bold text-slate-700 text-xs">
-                            ${dateKey}
+                            ${dateDisplay}
                         </td>
                         <td class="p-3">
-                            <div class="font-bold text-slate-900">${s.name}</div>
-                            <div class="text-[10px] text-slate-400 font-semibold">${s.type} &bull; ${s.subInfo}</div>
+                            <div class="font-bold text-slate-900">${s.name || 'Staff Member'}</div>
+                            <div class="text-[10px] text-slate-400 font-semibold">${s.type || 'Employee'} &bull; ${s.subInfo || s.id}</div>
                         </td>
                         <td class="p-3">
-                            <div class="font-semibold text-slate-800">${s.venue}</div>
-                            <div class="text-slate-500">${s.role}</div>
+                            <div class="font-semibold text-slate-800">${s.venue || 'Assigned Site'}</div>
+                            <div class="text-slate-500">${s.role || 'Duty'}</div>
                         </td>
                         <td class="p-3 bg-amber-50/40 border-l border-amber-100 text-center">
                             <span class="inline-flex items-center gap-1 font-bold text-amber-950 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full text-xs shadow-xs">
-                                <i class="fa-solid fa-stopwatch text-amber-700 text-[10px]"></i> Total: ${formatDuration(totalDayWorkedMs)}
+                                <i class="fa-solid fa-stopwatch text-amber-700 text-[10px]"></i> ${formatDuration(shiftMs)}
                             </span>
-                            <div class="text-[10px] text-slate-400 mt-0.5 font-medium">Shift: ${formatDuration(thisShiftWorkedMs)}</div>
                         </td>
-                        <td class="p-3 bg-emerald-50/40 border-l border-emerald-100 font-mono text-emerald-700 font-bold">
-                            ${s.punchIn}
+                        <td class="p-3 bg-emerald-50/40 border-l border-emerald-100">
+                            ${punchInDisplay}
                         </td>
                         <td class="p-3 bg-rose-50/40 border-l border-rose-100">
                             ${punchOutDisplay}
@@ -1272,6 +1293,11 @@
                         </td>
                         <td class="p-3 bg-indigo-50/50 border-l border-indigo-100">
                             ${locationMarkup}
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteSessionRecord('${key}')" class="text-slate-300 hover:text-rose-600 transition p-1" title="Delete Shift Record">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
                         </td>
                     `;
                     tableBody.appendChild(tr);
@@ -1287,33 +1313,69 @@
             });
         }
 
-        // ================= CSV EXPORT FUNCTION =================
+        // ================= CSV EXPORT FUNCTION WITH MONTHLY AVERAGE ENGINE =================
         function exportCSV() {
             const keys = Object.keys(cachedSessions);
             if (keys.length === 0) {
-                alert("No attendance data available to export.");
+                alert("No attendance shift data available to export.");
                 return;
             }
 
+            const monthlyAggregates = {};
+
+            // 1. Calculate Shift Durations & Monthly Groupings
+            keys.forEach((key) => {
+                const s = cachedSessions[key];
+                const dateStr = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
+                const monthKey = dateStr.slice(0, 7); // e.g. "2026-08"
+                const userMonthKey = `${s.id}_${monthKey}`;
+
+                if (!monthlyAggregates[userMonthKey]) {
+                    monthlyAggregates[userMonthKey] = {
+                        id: s.id,
+                        name: s.name,
+                        type: s.type,
+                        month: monthKey,
+                        totalDurationMs: 0,
+                        uniqueDaysSet: new Set()
+                    };
+                }
+
+                const startMs = s.punchInTimeMs || 0;
+                let shiftMs = 0;
+                if (startMs) {
+                    if (s.isActive) {
+                        shiftMs = Math.max(0, Date.now() - startMs);
+                    } else if (s.punchOutTimeMs) {
+                        shiftMs = Math.max(0, s.punchOutTimeMs - startMs);
+                    }
+                }
+
+                s._shiftMs = shiftMs;
+                monthlyAggregates[userMonthKey].totalDurationMs += shiftMs;
+                monthlyAggregates[userMonthKey].uniqueDaysSet.add(dateStr);
+            });
+
             const headers = [
-                "Date",
-                "Session ID",
+                "Punch-In Date",
+                "Punch-Out Date",
+                "Month",
                 "User Type",
-                "User / Employee ID",
+                "Employee / User ID",
                 "Full Name",
                 "Sub Details",
                 "This Shift Duration",
-                "Total Day Duty Hours",
+                "Days Worked In Month",
+                "Monthly Total Duty Hours",
+                "Monthly Avg Duty Hours / Day",
                 "Assigned Role",
                 "Event Venue",
                 "Punch-In Time",
                 "Punch-Out Time",
-                "Status",
-                "Location Type",
+                "Shift Status",
                 "Latitude",
                 "Longitude",
-                "Google Maps Link",
-                "Timestamp of Coordinate Capture"
+                "Google Maps Link"
             ];
 
             const escapeCSV = (val) => {
@@ -1325,39 +1387,67 @@
             const rows = [];
             rows.push(headers.join(","));
 
-            const { dailyTotalMsMap = {}, shiftDurationMsMap = {} } = cachedDutyData;
-
             keys.forEach((key) => {
                 const s = cachedSessions[key];
-                const mapsUrl = s.lat && s.lng ? `https://maps.google.com/?q=${s.lat},${s.lng}` : 'N/A';
-                const status = s.isActive ? 'Active' : 'Punched Out';
-                const locationType = s.isActive ? 'Live 2s Telemetry Stream' : 'Final Exit (Punch-Out) Location';
+                const lat = s.exitLat || s.lat;
+                const lng = s.exitLng || s.lng;
+                const mapsUrl = lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : 'N/A';
+                const status = s.isActive ? 'Active (On Duty)' : 'Closed (Punched Out)';
 
-                const dateKey = s.punchInDate || s.eventDate || 'Unknown Date';
-                const totalDayWorked = formatDuration(dailyTotalMsMap[`${s.id}_${dateKey}`] || 0);
-                const thisShiftWorked = formatDuration(shiftDurationMsMap[key] || 0);
+                const inDate = s.punchInDate || s.eventDate || new Date().toISOString().slice(0, 10);
+                const outDate = s.punchOutDate || '--';
+                const monthKey = inDate.slice(0, 7);
+                const userMonthKey = `${s.id}_${monthKey}`;
+
+                const mData = monthlyAggregates[userMonthKey] || { totalDurationMs: 0, uniqueDaysSet: new Set() };
+                const daysWorkedCount = mData.uniqueDaysSet.size || 1;
+                const monthlyTotalFormatted = formatDuration(mData.totalDurationMs);
+                const monthlyAvgDailyFormatted = formatDuration(Math.round(mData.totalDurationMs / daysWorkedCount)) + " / day";
 
                 const row = [
-                    escapeCSV(dateKey),
-                    escapeCSV(key),
-                    escapeCSV(s.type || ''),
+                    escapeCSV(inDate),
+                    escapeCSV(outDate),
+                    escapeCSV(monthKey),
+                    escapeCSV(s.type || 'Employee'),
                     escapeCSV(s.id || ''),
                     escapeCSV(s.name || ''),
                     escapeCSV(s.subInfo || ''),
-                    escapeCSV(thisShiftWorked),
-                    escapeCSV(totalDayWorked),
+                    escapeCSV(formatDuration(s._shiftMs || 0)),
+                    escapeCSV(daysWorkedCount + " days"),
+                    escapeCSV(monthlyTotalFormatted),
+                    escapeCSV(monthlyAvgDailyFormatted),
                     escapeCSV(s.role || ''),
                     escapeCSV(s.venue || ''),
-                    escapeCSV(s.punchIn || ''),
-                    escapeCSV(s.punchOut || '--'),
+                    escapeCSV(s.punchInTime || s.punchIn || ''),
+                    escapeCSV(s.punchOutTime || s.punchOut || '--'),
                     escapeCSV(status),
-                    escapeCSV(locationType),
-                    escapeCSV(s.lat || ''),
-                    escapeCSV(s.lng || ''),
-                    escapeCSV(mapsUrl),
-                    escapeCSV(s.isActive ? s.lastSeen : (s.punchOut || s.lastSeen))
+                    escapeCSV(lat || ''),
+                    escapeCSV(lng || ''),
+                    escapeCSV(mapsUrl)
                 ];
                 rows.push(row.join(","));
+            });
+
+            // Summary section at bottom of CSV
+            rows.push("\r\n");
+            rows.push("--- MONTHLY WORKING HOURS & ATTENDANCE SUMMARY TABLE ---");
+            rows.push("Month,Employee ID,Employee Name,User Category,Total Days Worked,Monthly Total Duty Hours,Monthly Average Hours / Day");
+
+            Object.keys(monthlyAggregates).forEach((uMonthKey) => {
+                const item = monthlyAggregates[uMonthKey];
+                const daysCount = item.uniqueDaysSet.size || 1;
+                const avgDailyMs = Math.round(item.totalDurationMs / daysCount);
+
+                const summaryRow = [
+                    escapeCSV(item.month),
+                    escapeCSV(item.id),
+                    escapeCSV(item.name),
+                    escapeCSV(item.type),
+                    escapeCSV(daysCount + " Days"),
+                    escapeCSV(formatDuration(item.totalDurationMs)),
+                    escapeCSV(formatDuration(avgDailyMs) + " / day")
+                ];
+                rows.push(summaryRow.join(","));
             });
 
             const csvContent = "\uFEFF" + rows.join("\r\n");
@@ -1367,7 +1457,7 @@
             const dateStr = new Date().toISOString().slice(0, 10);
             const downloadLink = document.createElement("a");
             downloadLink.setAttribute("href", url);
-            downloadLink.setAttribute("download", `EAV_Duty_Report_${dateStr}.csv`);
+            downloadLink.setAttribute("download", `EAV_Attendance_Report_${dateStr}.csv`);
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
@@ -1375,10 +1465,10 @@
         }
 
         function clearAuditHistory() {
-            if (confirm("Are you sure you want to clear ALL punch records from the cloud database?")) {
+            if (confirm("Are you sure you want to clear ALL shift records from the database?")) {
                 db.ref('sessions').remove();
                 db.ref('live_trails').remove();
-                alert("All attendance history and movement trails have been cleared.");
+                alert("All attendance history has been cleared.");
             }
         }
     </script>
