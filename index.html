@@ -88,7 +88,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none">EAV Attendance Cloud</h1>
-                    <span class="text-xs text-indigo-200">Shift Telemetry & Fleet Tracking</span>
+                    <span class="text-xs text-indigo-200">Device Locked Shift & Telemetry Portal</span>
                 </div>
             </div>
 
@@ -111,7 +111,7 @@
             <div class="bg-indigo-600 p-6 text-white text-center">
                 <i class="fa-solid fa-shield-halved text-4xl mb-2 text-indigo-200"></i>
                 <h2 class="text-2xl font-bold">Portal Access</h2>
-                <p class="text-xs text-indigo-100 mt-1">Select your access mode to punch in</p>
+                <p class="text-xs text-indigo-100 mt-1">Single-Device Locked Shift Access</p>
             </div>
 
             <!-- Login Tabs -->
@@ -125,9 +125,9 @@
             <div class="p-6">
                 <!-- A. Employee Login -->
                 <form id="formEmployeeLogin" onsubmit="loginEmployee(event)" class="space-y-4">
-                    <div id="empErrorAlert" class="hidden p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2">
-                        <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i>
-                        <span id="empErrorMessage">Invalid Employee! ID or Name not registered.</span>
+                    <div id="empErrorAlert" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2.5">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm mt-0.5"></i>
+                        <div id="empErrorMessage">Invalid Employee! ID or Name not registered.</div>
                     </div>
 
                     <div>
@@ -147,6 +147,11 @@
 
                 <!-- B. Cab Driver Login -->
                 <form id="formDriverLogin" onsubmit="loginDriver(event)" class="space-y-4 hidden">
+                    <div id="driverErrorAlert" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2.5">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm mt-0.5"></i>
+                        <div id="driverErrorMessage">Device lock active.</div>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Driver Name</label>
                         <input type="text" id="driverName" required placeholder="e.g. David Miller" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
@@ -200,7 +205,7 @@
             <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 rounded-2xl shadow-lg flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-emerald-900/60 border border-emerald-400/40 px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Shift Telemetry Active
+                        <span class="w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping"></span> Live Shift Telemetry (Device Bound)
                     </div>
                     <h2 class="text-2xl font-bold" id="userWelcomeTitle">Welcome</h2>
                     <p class="text-emerald-100 text-xs mt-1" id="userPunchInDetails"></p>
@@ -270,14 +275,14 @@
             <div class="flex flex-col md:flex-row justify-between md:items-center bg-white p-6 rounded-2xl shadow-md border border-slate-200 gap-4">
                 <div>
                     <h2 class="text-2xl font-black text-slate-800">Admin Command Center</h2>
-                    <p class="text-xs text-slate-500">Live shift tracking, exact punch-in/out timestamps, and monthly calculations.</p>
+                    <p class="text-xs text-slate-500">Live telemetry, device-binding overrides, and monthly shift reports.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="exportCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow flex items-center gap-1.5">
                         <i class="fa-solid fa-file-csv text-sm"></i> Export CSV (With Monthly Avgs)
                     </button>
                     <button onclick="clearAuditHistory()" class="px-4 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition">
-                        <i class="fa-solid fa-trash-can mr-1"></i> Clear Logs
+                        <i class="fa-solid fa-trash-can mr-1"></i> Clear Logs & Reset All
                     </button>
                     <button onclick="logoutAdmin()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition">
                         Logout Admin
@@ -378,7 +383,7 @@
                 <div id="adminLiveMap"></div>
             </div>
 
-            <!-- LIVE DATA TABLE WITH EXACT PUNCH-IN & PUNCH-OUT TIMESTAMPS -->
+            <!-- LIVE DATA TABLE WITH DEDICATED DATE COLUMN, FORCE UNLOCK & DELETE -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
@@ -398,7 +403,7 @@
                                 <th class="p-3 bg-indigo-50 text-indigo-900 border-l border-indigo-100">
                                     <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> Live Stream / Exit Location
                                 </th>
-                                <th class="p-3 text-center">Action</th>
+                                <th class="p-3 text-center">Admin Action</th>
                             </tr>
                         </thead>
                         <tbody id="adminAuditTableBody" class="divide-y divide-slate-100"></tbody>
@@ -444,7 +449,17 @@
         let autoFollowMap = true;
         const ADMIN_PASSCODE = "admin123";
 
-        // ================= STABLE BACKGROUND AUDIO KEEPALIVE =================
+        // ================= DEVICE IDENTIFICATION / FINGERPRINTING =================
+        function getOrCreateDeviceId() {
+            let id = localStorage.getItem('eav_device_id');
+            if (!id) {
+                id = 'DEV_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now().toString(36);
+                localStorage.setItem('eav_device_id', id);
+            }
+            return id;
+        }
+
+        // Background Audio Keepalive
         function initBackgroundAudioKeeper() {
             try {
                 if (!backgroundAudio) {
@@ -533,14 +548,17 @@
         }
         initRoster();
 
-        // Auto-Resume Active Shift on Page Reload
+        // Auto-Resume on Page Reload (Same Device Verification)
         window.addEventListener('DOMContentLoaded', () => {
             const savedSessionKey = localStorage.getItem('eav_active_session_key');
+            const currentDeviceId = getOrCreateDeviceId();
+
             if (savedSessionKey && savedSessionKey !== 'null' && savedSessionKey !== 'undefined') {
                 db.ref('sessions/' + savedSessionKey).once('value', (snapshot) => {
                     if (snapshot.exists()) {
                         const sessionData = snapshot.val();
-                        if (sessionData && sessionData.isActive === true && sessionData.name) {
+                        // Only resume if device matches and shift is active
+                        if (sessionData && sessionData.isActive === true && sessionData.name && sessionData.deviceId === currentDeviceId) {
                             currentUserKey = savedSessionKey;
                             lastKnownLat = sessionData.lat;
                             lastKnownLng = sessionData.lng;
@@ -577,7 +595,7 @@
             }
         }
 
-        // ================= EMPLOYEE LOGIN & SHIFT RESUME (ONE ENTRY PER SHIFT) =================
+        // ================= EMPLOYEE LOGIN WITH DEVICE RESTRICTION =================
         function loginEmployee(e) {
             e.preventDefault();
             const idInput = document.getElementById('empId').value.trim().toUpperCase();
@@ -587,7 +605,7 @@
             const loginBtn = document.getElementById('empLoginBtn');
 
             loginBtn.disabled = true;
-            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Verifying & Punching In...`;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Checking Device & Punching In...`;
 
             db.ref('registered_employees/' + idInput).once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -595,6 +613,7 @@
                     if (registeredData.name.toLowerCase() === nameInput.toLowerCase()) {
                         errorAlert.classList.add('hidden');
                         
+                        // 1. Check if Employee already has an ACTIVE shift anywhere in the database
                         db.ref('sessions').orderByChild('id').equalTo(idInput).once('value', (sessionSnap) => {
                             const sessions = sessionSnap.val() || {};
                             let activeKey = null;
@@ -608,19 +627,36 @@
                                 }
                             }
 
+                            const currentDeviceId = getOrCreateDeviceId();
+
                             if (activeKey) {
-                                // Resume existing ongoing shift without duplicate entry
-                                currentUserKey = activeKey;
-                                lastKnownLat = activeData.lat;
-                                lastKnownLng = activeData.lng;
-                                localStorage.setItem('eav_active_session_key', currentUserKey);
-                                renderUserPortal(activeData);
-                                startLiveLocationTracking();
-                                loginBtn.disabled = false;
-                                loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
+                                // 2. DEVICE RESTRICTION CHECK:
+                                if (activeData.deviceId && activeData.deviceId !== currentDeviceId) {
+                                    // BLOCKED: Active on another device!
+                                    loginBtn.disabled = false;
+                                    loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
+                                    errorAlert.classList.remove('hidden');
+                                    errorMsg.innerHTML = `
+                                        <strong>Device Locked:</strong> You are already punched in on another device!
+                                        <div class="text-[11px] font-normal text-rose-600 mt-1">
+                                            Active since: <b>${activeData.punchInTime || activeData.punchIn}</b> (${activeData.punchInDate}).<br/>
+                                            Please punch out from your original device first, or contact Admin to unlock your ID.
+                                        </div>
+                                    `;
+                                } else {
+                                    // SAME DEVICE: Resume active shift safely
+                                    currentUserKey = activeKey;
+                                    lastKnownLat = activeData.lat;
+                                    lastKnownLng = activeData.lng;
+                                    localStorage.setItem('eav_active_session_key', currentUserKey);
+                                    renderUserPortal(activeData);
+                                    startLiveLocationTracking();
+                                    loginBtn.disabled = false;
+                                    loginBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> <span>Employee Punch-In</span>`;
+                                }
                             } else {
-                                // Create clean canonical new shift
-                                captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}` }, loginBtn);
+                                // NO ACTIVE SHIFT: Create brand new shift locked to THIS device
+                                captureLocationAndStartSession({ id: idInput, name: registeredData.name, type: 'Employee', subInfo: `ID: ${idInput}`, deviceId: currentDeviceId }, loginBtn);
                             }
                         });
 
@@ -644,9 +680,10 @@
             const name = document.getElementById('driverName').value;
             const cabNo = document.getElementById('cabNumber').value;
             const loginBtn = document.getElementById('driverLoginBtn');
+            const currentDeviceId = getOrCreateDeviceId();
             loginBtn.disabled = true;
             loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS...`;
-            captureLocationAndStartSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}` }, loginBtn);
+            captureLocationAndStartSession({ id: 'DRV-' + Date.now().toString().slice(-4), name, type: 'Cab Driver', subInfo: `Cab: ${cabNo}`, deviceId: currentDeviceId }, loginBtn);
         }
 
         function loginGuest(e) {
@@ -655,9 +692,10 @@
             const company = document.getElementById('guestCompany').value;
             const phone = document.getElementById('guestPhone').value;
             const loginBtn = document.getElementById('guestLoginBtn');
+            const currentDeviceId = getOrCreateDeviceId();
             loginBtn.disabled = true;
             loginBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Getting GPS...`;
-            captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})` }, loginBtn);
+            captureLocationAndStartSession({ id: 'GST-' + Date.now().toString().slice(-4), name, type: 'Guest', subInfo: `${company} (${phone})`, deviceId: currentDeviceId }, loginBtn);
         }
 
         function captureLocationAndStartSession(userData, btnElement) {
@@ -673,7 +711,7 @@
                         }
                     },
                     (err) => {
-                        console.warn("Initial GPS prompt warning:", err.message);
+                        console.warn("Initial GPS prompt notice:", err.message);
                         createSessionAndNotify(userData, null, null);
                         if (btnElement) {
                             btnElement.disabled = false;
@@ -706,6 +744,7 @@
                 name: userData.name || 'Staff Member',
                 type: userData.type || 'Employee',
                 subInfo: userData.subInfo || '',
+                deviceId: userData.deviceId || getOrCreateDeviceId(), // Locked to this device
                 punchInDate: punchDate,
                 punchInTime: punchInTime,
                 punchInTimeMs: now,
@@ -760,7 +799,7 @@
             }
         }
 
-        // ================= CONTINUOUS LIVE GPS TRACKING =================
+        // Continuous GPS Telemetry
         function startLiveLocationTracking() {
             if (!("geolocation" in navigator)) return;
             isStreaming = true;
@@ -813,7 +852,7 @@
             );
         }
 
-        // ================= PUNCH OUT (ATOMIC KEY LOCK & ACCURATE CAPTURE) =================
+        // ================= PUNCH OUT WITH ATOMIC KEY LOCK & UNLOCK DEVICE =================
         function handleLogout() {
             if (!confirm("Are you sure you want to punch out and end your shift?")) return;
 
@@ -857,14 +896,13 @@
         }
 
         function finalizePunchOut(exitLat, exitLng, punchOutDate, punchOutTime, timestampMs) {
-            // ATOMIC LOCK: Cache target session key locally so asynchronous operations don't lose it
             const targetSessionKey = currentUserKey || localStorage.getItem('eav_active_session_key');
 
             if (targetSessionKey && targetSessionKey !== 'null' && targetSessionKey !== 'undefined') {
                 const finalLat = exitLat || lastKnownLat || null;
                 const finalLng = exitLng || lastKnownLng || null;
 
-                // 1. Direct Atomic Update on the exact session in Firebase
+                // Atomic Direct Update (Releases Device Lock)
                 db.ref('sessions/' + targetSessionKey).update({
                     lat: finalLat,
                     lng: finalLng,
@@ -874,16 +912,11 @@
                     punchOutTime: punchOutTime,
                     punchOut: punchOutTime,
                     punchOutTimeMs: timestampMs,
-                    isActive: false,
+                    isActive: false, // Unlocks employee ID
                     lastSeenMs: timestampMs,
                     lastSeen: punchOutTime
-                }).then(() => {
-                    console.log("Punch-out date & time confirmed in cloud for key:", targetSessionKey);
-                }).catch(err => {
-                    console.error("Firebase update error:", err);
-                });
+                }).catch(err => console.error("Firebase update error:", err));
 
-                // 2. Fetch Shift details for Telegram Notification
                 db.ref('sessions/' + targetSessionKey).once('value', (snapshot) => {
                     if (snapshot.exists()) {
                         const session = snapshot.val() || {};
@@ -896,7 +929,6 @@
                 });
             }
 
-            // Cleanup local state
             localStorage.removeItem('eav_active_session_key');
             currentUserKey = null;
             lastKnownLat = null;
@@ -926,7 +958,7 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD =================
+        // ================= ADMIN DASHBOARD & OVERRIDE UNLOCK =================
         function loginAdmin(e) {
             e.preventDefault();
             if (document.getElementById('adminPassword').value === ADMIN_PASSCODE) {
@@ -955,6 +987,27 @@
             if (!leafletMap || !lat || !lng) return;
             leafletMap.setView([lat, lng], 18, { animate: true });
             window.scrollTo({ top: document.getElementById('adminLiveMap').offsetTop - 80, behavior: 'smooth' });
+        }
+
+        // ADMIN OVERRIDE: Force Unlock an Employee's Active Shift
+        function adminForceUnlock(sessionKey, employeeName, employeeId) {
+            if (!confirm(`Force unlock and punch-out ${employeeName} (${employeeId})? This will immediately allow them to punch in on a new device.`)) return;
+
+            const now = Date.now();
+            const timeStr = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateStr = new Date(now).toISOString().slice(0, 10);
+
+            db.ref('sessions/' + sessionKey).update({
+                isActive: false, // Releases device lock
+                punchOutDate: dateStr,
+                punchOutTime: `${timeStr} (Admin Override)`,
+                punchOut: `${timeStr} (Admin Override)`,
+                punchOutTimeMs: now,
+                lastSeen: timeStr
+            }).then(() => {
+                triggerTelegramNotification(`⚠️ *ADMIN OVERRIDE - SHIFT UNLOCKED*\n👤 User: ${employeeName} (${employeeId})\n⚡ Shift was force-unlocked by Admin. Employee is now free to punch in on any device.`);
+                alert(`Shift for ${employeeName} has been force-unlocked! They can now punch in on any device.`);
+            });
         }
 
         function deleteSessionRecord(sessionKey) {
@@ -1141,13 +1194,13 @@
             });
         }
 
-        // ================= REAL-TIME TABLE AUDIT (CLEAN SHIFT RENDERING) =================
+        // ================= REAL-TIME TABLE AUDIT WITH UNLOCK OPTION =================
         function listenToCloudData() {
             db.ref('sessions').on('value', (snapshot) => {
                 const rawData = snapshot.val() || {};
                 const validData = {};
 
-                // Filter out broken records automatically
+                // Filter out invalid ghost records
                 Object.keys(rawData).forEach((k) => {
                     const item = rawData[k];
                     if (item && typeof item === 'object' && item.name && item.name !== 'undefined' && item.id && item.id !== 'undefined') {
@@ -1173,7 +1226,7 @@
                     const s = validData[key];
                     let pinColor = s.type === 'Cab Driver' ? '#f59e0b' : (s.type === 'Guest' ? '#10b981' : '#4f46e5');
 
-                    // ================= LIVE MAP MARKER =================
+                    // Map Pins for Active Telemetry
                     if (s.lat && s.lng && s.isActive) {
                         bounds.push([s.lat, s.lng]);
                         latestActiveCoord = [s.lat, s.lng];
@@ -1271,6 +1324,21 @@
                         locationMarkup = `<span class="text-slate-400 italic">GPS Connecting...</span>`;
                     }
 
+                    // Admin Action Buttons (Unlock if Active, Delete)
+                    let actionMarkup = `<div class="flex items-center justify-center gap-1.5">`;
+                    if (s.isActive) {
+                        actionMarkup += `
+                            <button onclick="adminForceUnlock('${key}', '${s.name || 'Staff'}', '${s.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 shadow-xs" title="Force Unlock Device">
+                                <i class="fa-solid fa-unlock"></i> Force Unlock
+                            </button>
+                        `;
+                    }
+                    actionMarkup += `
+                        <button onclick="deleteSessionRecord('${key}')" class="text-slate-300 hover:text-rose-600 transition p-1" title="Delete Shift Record">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>`;
+
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50";
                     tr.innerHTML = `
@@ -1303,9 +1371,7 @@
                             ${locationMarkup}
                         </td>
                         <td class="p-3 text-center">
-                            <button onclick="deleteSessionRecord('${key}')" class="text-slate-300 hover:text-rose-600 transition p-1" title="Delete Shift Record">
-                                <i class="fa-solid fa-trash-can text-xs"></i>
-                            </button>
+                            ${actionMarkup}
                         </td>
                     `;
                     tableBody.appendChild(tr);
@@ -1321,7 +1387,7 @@
             });
         }
 
-        // ================= CSV EXPORT FUNCTION WITH MONTHLY AVERAGE ENGINE =================
+        // ================= CSV EXPORT FUNCTION WITH MONTHLY AVERAGES =================
         function exportCSV() {
             const keys = Object.keys(cachedSessions);
             if (keys.length === 0) {
@@ -1435,6 +1501,7 @@
                 rows.push(row.join(","));
             });
 
+            // Summary section at bottom of CSV
             rows.push("\r\n");
             rows.push("--- MONTHLY WORKING HOURS & ATTENDANCE SUMMARY TABLE ---");
             rows.push("Month,Employee ID,Employee Name,User Category,Total Days Worked,Monthly Total Duty Hours,Monthly Average Hours / Day");
@@ -1474,7 +1541,7 @@
             if (confirm("Are you sure you want to clear ALL shift records from the database?")) {
                 db.ref('sessions').remove();
                 db.ref('live_trails').remove();
-                alert("All attendance history has been cleared.");
+                alert("All attendance history and movement trails have been cleared.");
             }
         }
     </script>
